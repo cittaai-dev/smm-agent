@@ -5,9 +5,13 @@ import { useRef, useState } from "react";
 export function FileUploadZone({
   onUpload,
   disabled,
+  label = "Drag a brand document here, or",
+  accept = ".pdf,.docx,.txt",
 }: {
   onUpload: (file: File) => void;
   disabled?: boolean;
+  label?: string;
+  accept?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [lastFileName, setLastFileName] = useState<string | null>(null);
@@ -28,7 +32,7 @@ export function FileUploadZone({
         handleFiles(e.dataTransfer.files);
       }}
     >
-      <p className="text-slate-600">Drag a brand document here, or</p>
+      <p className="text-slate-600">{label}</p>
       <button
         type="button"
         className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
@@ -40,7 +44,7 @@ export function FileUploadZone({
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.docx,.txt"
+        accept={accept}
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
       />

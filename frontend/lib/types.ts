@@ -1,35 +1,30 @@
-// Mirrors backend/app/domain/*.py. Keep in sync by hand for Step 1; a generated
-// openapi-typescript client (see CLAUDE.md's FE<->BE contract note) replaces
-// this once the API surface stabilizes past Step 1.
+// Domain types are generated from the backend's OpenAPI schema into
+// ./api-types.ts (see package.json's gen:api-types script) -- re-run that
+// against a running backend whenever the API surface changes. This file just
+// re-exports ergonomic names from the generated schemas, plus genuinely
+// FE-only shapes the backend doesn't own.
+import type { components } from "./api-types";
 
-export type RejectionReason = "missing_chunk" | "no_citation" | null;
+export type SectionId = components["schemas"]["SectionResult"]["section"];
+export type SectionStatus = components["schemas"]["SectionResult"]["status"];
+export type SectionResult = components["schemas"]["SectionResult"];
 
-export interface VerifiedClaim {
-  section: string;
-  text: string;
-  chunk_id: string;
-  block_span: [number, number];
-  verified: boolean;
-  rejection_reason: RejectionReason;
-}
+export type DocumentStatus = components["schemas"]["MarketResearchDocument"]["status"];
+export type MarketResearchDocument = components["schemas"]["MarketResearchDocument"];
 
-export type DeliverableStatus =
-  | "draft"
-  | "pending_approval"
-  | "approved"
-  | "rejected"
-  | "insufficient_grounding";
+export type VerifiedClaim = components["schemas"]["VerifiedClaim"];
+export type RejectionReason = VerifiedClaim["rejection_reason"];
 
-export interface Deliverable {
-  id: string;
-  brand_id: string;
-  status: DeliverableStatus;
-  claims: VerifiedClaim[];
-  call_site_trace: Record<string, number>;
-}
+export type SourceFile = components["schemas"]["SourceFile"];
+export type SourceKind = components["schemas"]["SourceFile"]["source_kind"];
 
 export interface UploadResult {
   status: string;
+}
+
+export interface TeamInput {
+  text: string;
+  author: string | null;
 }
 
 export type ApprovalChoice = "approved" | "rejected";

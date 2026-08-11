@@ -13,6 +13,11 @@ services:
   backend:
     build: ../backend
     depends_on: [postgres, redis]
+    # Picks up SMM_LLM_OPENAI_API_KEY and friends from the developer's local
+    # backend/.env without baking secrets into this file. environment: below
+    # still wins over env_file for the same key (DATABASE_URL/REDIS_URL must
+    # point at the docker network's service names, not .env's localhost ones).
+    env_file: ../backend/.env
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:dev@postgres/smm
       REDIS_URL: redis://redis
@@ -20,13 +25,23 @@ services:
       # network -- this must match wherever the frontend is actually served.
       SMM_API_CORS_ORIGINS: http://localhost:3000
     ports: ["8000:8000"]
-  worker:
+    volumes:
+      # backend writes the uploaded file to disk, then hands the *path* to a
+      # Celery task -- without a shared volume, worker-ingest (a separate
+      # container, separate filesystem) can't open it. Bit us for real: this
+      # only ever worked in local dev because backend/worker ran as bare
+      # processes sharing the host filesystem, not containers.
+      - uploads:/app/uploads
+  worker-ingest:
     build: ../backend
-    command: celery -A app.infra.celery_app worker --loglevel=info
+    command: celery -A app.infra.celery_app worker -Q ingest --loglevel=info --concurrency=4
     depends_on: [postgres, redis]
+    env_file: ../backend/.env
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:dev@postgres/smm
       REDIS_URL: redis://redis
+    volumes:
+      - uploads:/app/uploads
   frontend:
     build:
       context: ../frontend
@@ -37,3 +52,4 @@ services:
 
 volumes:
   pgdata:
+  uploads:

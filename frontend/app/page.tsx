@@ -11,14 +11,14 @@ export default function Home() {
     e.preventDefault();
     const id = brandId.trim();
     if (!id) return;
-    router.push(`/brands/${encodeURIComponent(id)}/upload`);
+    router.push(`/brands/${encodeURIComponent(id)}/onboard`);
   }
 
   return (
     <main className="flex flex-col gap-4">
       <h1 className="text-2xl font-semibold">Start a brand's Market Research</h1>
       <p className="text-slate-600">
-        Enter a brand id to onboard material and run SOP-01 §1 (Brand overview).
+        Enter a brand id to onboard material and run the full SOP-01 Market Research document.
       </p>
       <form onSubmit={goToUpload} className="flex gap-2">
         <input
