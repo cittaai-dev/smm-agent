@@ -39,7 +39,9 @@ def clean_db():
         session.execute(
             "TRUNCATE deliverable, chunk, document_registry, source_file, "
             "team_input, market_research_document, strategic_note, "
-            "approval_gate, distribution_record, rerank_cache CASCADE"
+            "approval_gate, distribution_record, rerank_cache, "
+            "brand_grant, api_key, brand, app_user, "
+            "promotion_request, kb_version, golden_case, core_competitor_registry CASCADE"
         )
         session.commit()
     yield

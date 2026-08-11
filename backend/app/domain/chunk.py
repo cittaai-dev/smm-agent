@@ -1,4 +1,12 @@
+from typing import Literal
+
 from pydantic import BaseModel
+
+# L0 = atomic (row/cell/degraded fallback), L1 = paragraph/conceptual (Brand
+# Workspace ceiling), L2 = paragraph+ context, L3 = section+ (Core-only,
+# dual-kb.md's evidence-unit ladder). Brand Workspace never produces L2/L3 --
+# route_and_chunk()'s ladder param caps it at L1.
+ChunkStrategy = Literal["L0", "L1", "L2", "L3"]
 
 
 class Block(BaseModel):
@@ -21,3 +29,4 @@ class Chunk(BaseModel):
     order_confidence: float = 1.0
     degraded: bool = False
     heading_path: list[str] = []
+    strategy: ChunkStrategy = "L1"

@@ -3,18 +3,21 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.requests import Request
 
+from app.api.deps import current_user
 from app.domain.deliverable import Deliverable
+from app.domain.kb_version import EvalGateResult, GoldenCase, KBVersion
 from app.domain.market_research_document import MarketResearchDocument
 from app.domain.quality import QualityCheckpoint, evaluate_checkpoint
 from app.domain.review import ApprovalGateRecord, DistributionRecord, StrategicNote
 from app.domain.sop1 import SECTIONS_BY_ID
 from app.domain.source_file import SourceFile
+from app.domain.user import User
 from app.infra.db import get_session
 from app.infra.settings import api_settings
 from app.infra.telemetry import instrument_app
@@ -63,6 +66,19 @@ class StrategicNotePayload(BaseModel):
 class DistributionPayload(BaseModel):
     internal: bool
     client: bool
+
+
+class StagingBuildPayload(BaseModel):
+    source_paths: list[str]
+    target_version: int
+
+
+class PromotionRequestPayload(BaseModel):
+    source_summary: str
+
+
+class PromotionDecisionPayload(BaseModel):
+    decision: Literal["approved", "rejected"]
 
 
 @app.get("/brands/{brand_id}/sections/{section_id}/team-input")
@@ -229,6 +245,134 @@ async def distribute_document(document_id: str, payload: DistributionPayload) ->
 @app.get("/documents/{document_id}/distribution")
 async def get_distribution(document_id: str) -> DistributionRecord | None:
     return _load_distribution(document_id)
+
+
+@app.post("/core/staging/build")
+async def trigger_staging_build(payload: StagingBuildPayload, user: User = Depends(current_user)) -> dict:
+    from app.workers.core_ingest import build_staging
+
+    build_staging.delay(payload.source_paths, payload.target_version)
+    return {"status": "queued", "target_version": payload.target_version}
+
+
+@app.get("/core/versions")
+async def list_core_versions() -> list[KBVersion]:
+    with get_session() as session:
+        rows = session.execute(
+            "SELECT kb_id, version, status, eval_gate_result, promoted_at, promoted_by "
+            "FROM kb_version ORDER BY version DESC"
+        ).mappings().all()
+    return [KBVersion(**row) for row in rows]
+
+
+@app.post("/core/staging/{version}/promotion-requests")
+async def create_promotion_request(
+    version: int, payload: PromotionRequestPayload, user: User = Depends(current_user)
+) -> dict:
+    from app.eval.gate import evaluate_staging
+    from app.eval.golden_runner import default_synthesis_runner
+
+    staging_kb_id = f"core:market-intel@v{version}:staging"
+    with get_session() as session:
+        exists = session.execute(
+            "SELECT 1 FROM kb_version WHERE kb_id = :kb", {"kb": staging_kb_id}
+        ).first()
+    if exists is None:
+        raise HTTPException(404, detail=f"no staging build found for version {version}")
+
+    golden_set = _load_golden_set()
+    result = evaluate_staging(staging_kb_id, golden_set, run_synthesis_against=default_synthesis_runner)
+
+    with get_session() as session:
+        session.execute(
+            "UPDATE kb_version SET eval_gate_result = (:r)::jsonb WHERE kb_id = :kb",
+            {"r": result.model_dump_json(), "kb": staging_kb_id},
+        )
+        session.commit()
+
+    if not result.passed:
+        # Eval gate necessary, not sufficient (dev_guidelines.md): a failing
+        # corpus is blocked here, before a human ever sees a /decide prompt.
+        raise HTTPException(422, detail={"reason": "eval_gate_failed", "result": result.model_dump()})
+
+    request_id = f"pr-v{version}-{uuid4().hex[:12]}"
+    with get_session() as session:
+        session.execute(
+            """INSERT INTO promotion_request (id, kb_id, source_summary, requested_by, status)
+               VALUES (:id, :kb, :summary, :user, 'pending')""",
+            {"id": request_id, "kb": staging_kb_id, "summary": payload.source_summary, "user": user.id},
+        )
+        session.commit()
+
+    return {
+        "request_id": request_id,
+        "kb_id": staging_kb_id,
+        "status": "pending",
+        "eval_result": result.model_dump(),
+    }
+
+
+@app.post("/core/promotion-requests/{request_id}/decide")
+async def decide_promotion(
+    request_id: str, payload: PromotionDecisionPayload, user: User = Depends(current_user)
+) -> dict:
+    with get_session() as session:
+        row = session.execute(
+            "SELECT id, kb_id, status FROM promotion_request WHERE id = :id", {"id": request_id}
+        ).mappings().first()
+    if row is None:
+        raise HTTPException(404, detail=f"no such promotion request: {request_id}")
+    if row["status"] != "pending":
+        raise HTTPException(409, detail=f"cannot decide a request already {row['status']}")
+
+    if payload.decision == "rejected":
+        with get_session() as session:
+            session.execute(
+                "UPDATE promotion_request SET status = 'rejected', reviewed_by = :user, reviewed_at = now() "
+                "WHERE id = :id",
+                {"user": user.id, "id": request_id},
+            )
+            session.execute(
+                "UPDATE kb_version SET status = 'rejected' WHERE kb_id = :kb", {"kb": row["kb_id"]}
+            )
+            session.commit()
+        return {"request_id": request_id, "decision": "rejected"}
+
+    staging_kb_id = row["kb_id"]
+    promoted_kb_id = staging_kb_id.removesuffix(":staging")
+    # Atomic rename staging -> promoted: every chunk's kb_id flips in the same
+    # transaction as the kb_version row, so no reader can observe a half-moved
+    # corpus (P6: idempotent, all-or-nothing). kb_version.kb_id is the FK's
+    # referenced side (ON UPDATE CASCADE, migration 0007) so renaming it here
+    # automatically carries promotion_request.kb_id along -- update that row's
+    # status separately, by id, since its kb_id will already have moved.
+    with get_session() as session:
+        session.execute(
+            "UPDATE chunk SET kb_id = :new WHERE kb_id = :old", {"new": promoted_kb_id, "old": staging_kb_id}
+        )
+        session.execute(
+            "UPDATE document_registry SET kb_id = :new WHERE kb_id = :old",
+            {"new": promoted_kb_id, "old": staging_kb_id},
+        )
+        session.execute(
+            """UPDATE kb_version SET kb_id = :new, status = 'promoted', promoted_by = :user, promoted_at = now()
+               WHERE kb_id = :old""",
+            {"new": promoted_kb_id, "user": user.id, "old": staging_kb_id},
+        )
+        session.execute(
+            "UPDATE promotion_request SET status = 'approved', reviewed_by = :user, reviewed_at = now() "
+            "WHERE id = :id",
+            {"user": user.id, "id": request_id},
+        )
+        session.commit()
+
+    return {"request_id": request_id, "decision": "approved", "kb_id": promoted_kb_id}
+
+
+def _load_golden_set() -> list[GoldenCase]:
+    with get_session() as session:
+        rows = session.execute("SELECT id, topic, section, fixture_chunks FROM golden_case").mappings().all()
+    return [GoldenCase(**row) for row in rows]
 
 
 @app.get("/documents/{document_id}/approval-gate")

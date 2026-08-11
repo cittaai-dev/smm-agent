@@ -48,6 +48,23 @@ services:
       REDIS_URL: redis://redis
     volumes:
       - uploads:/app/uploads
+  worker-core:
+    build: ../backend
+    # Core builds run for hours against dozens of curated sources -- its own
+    # queue and concurrency, deliberately not sharing worker-ingest (Step
+    # 2's brand-file queue is latency-bound; this one is throughput-bound and
+    # must never starve, or be starved by, a Team Lead's file upload).
+    command: celery -A app.infra.celery_app worker -Q core --loglevel=info --concurrency=2
+    depends_on: [postgres, redis]
+    env_file: ../backend/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:dev@postgres/smm
+      REDIS_URL: redis://redis
+    volumes:
+      # Curated Market Intel Core source docs -- distinct from the per-brand
+      # `uploads` volume: these are operator-provided, not client-uploaded,
+      # and never touch a run:<brand_id> KB.
+      - core-sources:/app/core-sources
   frontend:
     build:
       context: ../frontend
@@ -60,3 +77,4 @@ volumes:
   pgdata:
   uploads:
   hf-cache:
+  core-sources:

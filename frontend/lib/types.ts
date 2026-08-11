@@ -45,3 +45,45 @@ export interface CheckpointFailedDetail {
   reason: "quality_checkpoint_failed";
   checkpoint: QualityCheckpoint;
 }
+
+// Step 4: Market Intel Core types. Hand-written, not yet in api-types.ts --
+// re-run `gen:api-types` against a running backend once these endpoints ship
+// and delete these in favor of the generated components["schemas"] versions,
+// matching every other type in this file.
+export interface EvalGateResult {
+  citation_rejection_rate: number;
+  degraded_ratio: number;
+  l0_ratio: number;
+  coverage_ok: boolean;
+  passed: boolean;
+  thresholds: Record<string, number>;
+}
+
+export type KBVersionStatus = "staging" | "promoted" | "rejected";
+
+export interface KBVersion {
+  kb_id: string;
+  version: number;
+  status: KBVersionStatus;
+  eval_gate_result: EvalGateResult | null;
+  promoted_at: string | null;
+  promoted_by: string | null;
+}
+
+// Shape of the 422 the promotion-requests endpoint raises when the eval gate
+// blocks a staging corpus -- same pattern as CheckpointFailedDetail above.
+export interface EvalGateFailedDetail {
+  reason: "eval_gate_failed";
+  result: EvalGateResult;
+}
+
+export interface BridgeChunk {
+  chunk_id: string;
+  kb_id: string;
+  text: string;
+}
+
+export interface BridgePair {
+  run_chunk: BridgeChunk;
+  core_chunk: BridgeChunk;
+}
