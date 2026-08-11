@@ -12,7 +12,7 @@ from starlette.requests import Request
 from app.domain.deliverable import Deliverable
 from app.domain.market_research_document import MarketResearchDocument
 from app.domain.quality import QualityCheckpoint, evaluate_checkpoint
-from app.domain.review import DistributionRecord, StrategicNote
+from app.domain.review import ApprovalGateRecord, DistributionRecord, StrategicNote
 from app.domain.sop1 import SECTIONS_BY_ID
 from app.domain.source_file import SourceFile
 from app.infra.db import get_session
@@ -145,6 +145,17 @@ async def get_document(document_id: str) -> MarketResearchDocument | None:
     return _load_document(document_id)
 
 
+@app.get("/documents/{document_id}/checkpoint")
+async def get_checkpoint(document_id: str) -> QualityCheckpoint:
+    # Live preview of the exact gate /approve will enforce -- same
+    # evaluate_checkpoint call, so the FE never re-implements this logic in
+    # TS and risks it drifting from the server-enforced version.
+    document = _load_document(document_id)
+    if document is None:
+        raise HTTPException(404, detail=f"no such document: {document_id}")
+    return evaluate_checkpoint(document)
+
+
 @app.post("/documents/{document_id}/notes")
 async def add_note(document_id: str, payload: StrategicNotePayload) -> StrategicNote:
     if _load_document(document_id) is None:
@@ -218,6 +229,14 @@ async def distribute_document(document_id: str, payload: DistributionPayload) ->
 @app.get("/documents/{document_id}/distribution")
 async def get_distribution(document_id: str) -> DistributionRecord | None:
     return _load_distribution(document_id)
+
+
+@app.get("/documents/{document_id}/approval-gate")
+async def get_approval_gate(document_id: str) -> ApprovalGateRecord | None:
+    # Provenance (P7): the checkpoint as it stood *at decision time*, plus who
+    # decided and when -- distinct from the live /checkpoint preview above and
+    # from document.status, neither of which carries who or when.
+    return _load_approval_gate(document_id)
 
 
 @app.get("/deliverables/{deliverable_id}")
@@ -363,6 +382,16 @@ def _save_approval_gate(document_id: str, decision: ApprovalDecision, checkpoint
             },
         )
         session.commit()
+
+
+def _load_approval_gate(document_id: str) -> ApprovalGateRecord | None:
+    with get_session() as session:
+        row = session.execute(
+            "SELECT document_id, approver_id, decision, note, checkpoint, decided_at FROM approval_gate "
+            "WHERE document_id = :id",
+            {"id": document_id},
+        ).mappings().first()
+    return ApprovalGateRecord(**row) if row else None
 
 
 def _save_distribution(record: DistributionRecord) -> None:

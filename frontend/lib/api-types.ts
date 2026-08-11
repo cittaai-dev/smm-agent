@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Metrics
+         * @description Endpoint that serves Prometheus metrics.
+         */
+        get: operations["metrics_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/brands/{brand_id}/sections/{section_id}/team-input": {
         parameters: {
             query?: never;
@@ -91,6 +111,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/documents/{document_id}/checkpoint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Checkpoint */
+        get: operations["get_checkpoint_documents__document_id__checkpoint_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Notes */
+        get: operations["list_notes_documents__document_id__notes_get"];
+        put?: never;
+        /** Add Note */
+        post: operations["add_note_documents__document_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/documents/{document_id}/approve": {
         parameters: {
             query?: never;
@@ -102,6 +157,57 @@ export interface paths {
         put?: never;
         /** Approve Document */
         post: operations["approve_document_documents__document_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/distribute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Distribute Document */
+        post: operations["distribute_document_documents__document_id__distribute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/distribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Distribution */
+        get: operations["get_distribution_documents__document_id__distribution_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/approval-gate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Approval Gate */
+        get: operations["get_approval_gate_documents__document_id__approval_gate_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -158,6 +264,26 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /**
+         * ApprovalGateRecord
+         * @description Provenance, not the current-state field (document.status already carries
+         *     that) -- the QualityCheckpoint as it stood *at decision time*, who decided,
+         *     when. Dropping this at the approve boundary would be exactly the kind of
+         *     confidence-loss P7 calls out.
+         */
+        ApprovalGateRecord: {
+            /** Document Id */
+            document_id: string;
+            /** Approver Id */
+            approver_id?: string | null;
+            /** Decision */
+            decision?: ("approved" | "rejected") | null;
+            /** Note */
+            note?: string | null;
+            checkpoint: components["schemas"]["QualityCheckpoint"];
+            /** Decided At */
+            decided_at?: string | null;
+        };
         /** Body_upload_source_brands__brand_id__sources_post */
         Body_upload_source_brands__brand_id__sources_post: {
             /** File */
@@ -182,6 +308,27 @@ export interface components {
             call_site_trace: {
                 [key: string]: number;
             };
+        };
+        /** DistributionPayload */
+        DistributionPayload: {
+            /** Internal */
+            internal: boolean;
+            /** Client */
+            client: boolean;
+        };
+        /** DistributionRecord */
+        DistributionRecord: {
+            /** Document Id */
+            document_id: string;
+            /** Internal */
+            internal: boolean;
+            /** Client */
+            client: boolean;
+            /**
+             * Distributed At
+             * Format: date-time
+             */
+            distributed_at: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -208,6 +355,17 @@ export interface components {
                 [key: string]: number;
             };
         };
+        /** QualityCheckpoint */
+        QualityCheckpoint: {
+            /** All Sections Filled */
+            all_sections_filled: boolean;
+            /** Competitor Count Ok */
+            competitor_count_ok: boolean;
+            /** Personas Grounded */
+            personas_grounded: boolean;
+            /** Findings Lead To Recommendations */
+            findings_lead_to_recommendations: boolean;
+        };
         /** SectionResult */
         SectionResult: {
             /**
@@ -227,6 +385,11 @@ export interface components {
              * @default []
              */
             claims: components["schemas"]["VerifiedClaim"][];
+            /**
+             * Personas
+             * @default []
+             */
+            personas: components["schemas"]["VerifiedAudiencePersona"][];
             /**
              * Call Site Trace
              * @default {}
@@ -263,6 +426,33 @@ export interface components {
              */
             created_at: string;
         };
+        /** StrategicNote */
+        StrategicNote: {
+            /** Id */
+            id: string;
+            /** Document Id */
+            document_id: string;
+            /** Section */
+            section: string;
+            /** Text */
+            text: string;
+            /** Author */
+            author: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** StrategicNotePayload */
+        StrategicNotePayload: {
+            /** Section */
+            section: string;
+            /** Text */
+            text: string;
+            /** Author */
+            author: string;
+        };
         /** TeamInputPayload */
         TeamInputPayload: {
             /** Text */
@@ -282,6 +472,34 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VerifiedAudiencePersona */
+        VerifiedAudiencePersona: {
+            /** Persona Id */
+            persona_id: string;
+            /** Section */
+            section: string;
+            /** Name */
+            name: string;
+            /**
+             * Pain Points
+             * @default []
+             */
+            pain_points: string[];
+            /**
+             * Interests
+             * @default []
+             */
+            interests: string[];
+            /**
+             * Chunk Ids
+             * @default []
+             */
+            chunk_ids: string[];
+            /** Verified */
+            verified: boolean;
+            /** Rejection Reason */
+            rejection_reason?: ("no_citation" | "missing_chunk" | "incomplete_persona") | null;
         };
         /** VerifiedClaim */
         VerifiedClaim: {
@@ -326,6 +544,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    metrics_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     get_team_input_brands__brand_id__sections__section_id__team_input_get: {
         parameters: {
             query?: never;
@@ -557,6 +795,103 @@ export interface operations {
             };
         };
     };
+    get_checkpoint_documents__document_id__checkpoint_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualityCheckpoint"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notes_documents__document_id__notes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StrategicNote"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_note_documents__document_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StrategicNotePayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StrategicNote"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     approve_document_documents__document_id__approve_post: {
         parameters: {
             query?: never;
@@ -579,6 +914,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarketResearchDocument"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    distribute_document_documents__document_id__distribute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DistributionPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DistributionRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_distribution_documents__document_id__distribution_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DistributionRecord"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_approval_gate_documents__document_id__approval_gate_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalGateRecord"] | null;
                 };
             };
             /** @description Validation Error */

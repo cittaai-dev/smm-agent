@@ -1,8 +1,12 @@
 import type {
   ApprovalChoice,
+  ApprovalGateRecord,
+  DistributionRecord,
   MarketResearchDocument,
+  QualityCheckpoint,
   SourceFile,
   SourceKind,
+  StrategicNote,
   TeamInput,
   UploadResult,
 } from "./types";
@@ -13,6 +17,11 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    // FastAPI's `detail` is a plain string for most errors but a structured
+    // object for the checkpoint-failed 422 (CheckpointFailedDetail) -- kept
+    // as unknown here (rather than that union) so this file doesn't need to
+    // know every shape `detail` can take; callers that care narrow it.
+    public detail?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -22,16 +31,19 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, init);
   if (!res.ok) {
-    // FastAPI error responses are {"detail": "..."} -- surface that instead
-    // of just the status code, so e.g. "LLM not configured" reaches the UI
-    // instead of a bare "failed: 503".
     const detail = await res
       .clone()
       .json()
-      .then((body) => (typeof body?.detail === "string" ? body.detail : null))
+      .then((body) => body?.detail ?? null)
       .catch(() => null);
-    const message = detail ?? `${init?.method ?? "GET"} ${path} failed: ${res.status}`;
-    throw new ApiError(res.status, message);
+    // FastAPI error responses are {"detail": "..."} for most endpoints, but
+    // {"detail": {"reason": ..., "checkpoint": ...}} for the checkpoint gate
+    // -- only a string detail makes a good headline message, so the object
+    // case falls back to the generic "failed: 422" for `message` and relies
+    // on the separate `detail` field for callers that need the structure.
+    const message =
+      typeof detail === "string" ? detail : `${init?.method ?? "GET"} ${path} failed: ${res.status}`;
+    throw new ApiError(res.status, message, detail ?? undefined);
   }
   return (await res.json()) as T;
 }
@@ -86,10 +98,52 @@ export function approveDocument(
   documentId: string,
   approverId: string,
   decision: ApprovalChoice,
+  note?: string,
 ): Promise<MarketResearchDocument> {
   return request<MarketResearchDocument>(`/documents/${encodeURIComponent(documentId)}/approve`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ approver_id: approverId, decision }),
+    body: JSON.stringify({ approver_id: approverId, decision, note: note ?? null }),
   });
+}
+
+export function getCheckpoint(documentId: string): Promise<QualityCheckpoint> {
+  return request<QualityCheckpoint>(`/documents/${encodeURIComponent(documentId)}/checkpoint`);
+}
+
+export function getApprovalGate(documentId: string): Promise<ApprovalGateRecord | null> {
+  return request<ApprovalGateRecord | null>(`/documents/${encodeURIComponent(documentId)}/approval-gate`);
+}
+
+export function listNotes(documentId: string): Promise<StrategicNote[]> {
+  return request<StrategicNote[]>(`/documents/${encodeURIComponent(documentId)}/notes`);
+}
+
+export function addNote(
+  documentId: string,
+  section: string,
+  text: string,
+  author: string,
+): Promise<StrategicNote> {
+  return request<StrategicNote>(`/documents/${encodeURIComponent(documentId)}/notes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ section, text, author }),
+  });
+}
+
+export function distributeDocument(
+  documentId: string,
+  internal: boolean,
+  client: boolean,
+): Promise<DistributionRecord> {
+  return request<DistributionRecord>(`/documents/${encodeURIComponent(documentId)}/distribute`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ internal, client }),
+  });
+}
+
+export function getDistribution(documentId: string): Promise<DistributionRecord | null> {
+  return request<DistributionRecord | null>(`/documents/${encodeURIComponent(documentId)}/distribution`);
 }

@@ -19,7 +19,7 @@ describe("approveDocument", () => {
       expect.stringContaining("/documents/doc-1/approve"),
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ approver_id: "team_lead", decision: "approved" }),
+        body: JSON.stringify({ approver_id: "team_lead", decision: "approved", note: null }),
       }),
     );
   });

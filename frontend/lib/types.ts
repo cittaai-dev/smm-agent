@@ -15,6 +15,14 @@ export type MarketResearchDocument = components["schemas"]["MarketResearchDocume
 export type VerifiedClaim = components["schemas"]["VerifiedClaim"];
 export type RejectionReason = VerifiedClaim["rejection_reason"];
 
+export type VerifiedAudiencePersona = components["schemas"]["VerifiedAudiencePersona"];
+export type PersonaRejectionReason = VerifiedAudiencePersona["rejection_reason"];
+
+export type QualityCheckpoint = components["schemas"]["QualityCheckpoint"];
+export type StrategicNote = components["schemas"]["StrategicNote"];
+export type DistributionRecord = components["schemas"]["DistributionRecord"];
+export type ApprovalGateRecord = components["schemas"]["ApprovalGateRecord"];
+
 export type SourceFile = components["schemas"]["SourceFile"];
 export type SourceKind = components["schemas"]["SourceFile"]["source_kind"];
 
@@ -28,3 +36,12 @@ export interface TeamInput {
 }
 
 export type ApprovalChoice = "approved" | "rejected";
+
+// Shape of the 422 the approve endpoint raises when the QualityCheckpoint
+// gate fails -- distinct from the plain-string `detail` every other error
+// uses, so ApiError carries it separately rather than losing it to the
+// generic "failed: 422" message.
+export interface CheckpointFailedDetail {
+  reason: "quality_checkpoint_failed";
+  checkpoint: QualityCheckpoint;
+}
