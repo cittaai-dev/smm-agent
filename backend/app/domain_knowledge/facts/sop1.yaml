@@ -1,0 +1,9 @@
+- id: measured-over-adjective
+  scope: global
+  text: "Prefer a measured number ('18.4k followers, 5 posts/week') over a marketing adjective ('strong presence')."
+- id: brand-overview-scope
+  scope: "section:brand_overview"
+  text: "Brand overview covers what the brand does, its products/services, history, and current situation only — not audience, goals, or competitors."
+- id: swot-weakness-scope
+  scope: "section:swot"
+  text: "A Weakness is internal to the brand. A market threat belongs in Threats, not Weaknesses."

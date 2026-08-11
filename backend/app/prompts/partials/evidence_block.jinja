@@ -1,0 +1,5 @@
+{% for chunk in chunks %}
+<evidence kb_id="{{ chunk.kb_id }}" chunk_id="{{ chunk.chunk_id }}">
+{{ chunk.text }}
+</evidence>
+{% endfor %}
