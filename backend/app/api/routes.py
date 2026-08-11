@@ -1,4 +1,6 @@
-from datetime import UTC, datetime
+import hashlib
+import secrets
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 from uuid import uuid4
@@ -9,15 +11,21 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.requests import Request
 
-from app.api.deps import current_user
+from app.api.deps import current_user, resolve_brand_scope
+from app.domain.approval import ApprovalEvent
+from app.domain.client_view import ClientMarketResearchView, project_for_client
+from app.domain.data_source import DataSourceKind
 from app.domain.deliverable import Deliverable
-from app.domain.kb_version import EvalGateResult, GoldenCase, KBVersion
+from app.domain.distribution import DistributionEvent, DistributionLink
+from app.domain.kb_version import GoldenCase, KBVersion
 from app.domain.market_research_document import MarketResearchDocument
+from app.domain.market_segment import MarketSegment
 from app.domain.quality import QualityCheckpoint, evaluate_checkpoint
 from app.domain.review import ApprovalGateRecord, DistributionRecord, StrategicNote
 from app.domain.sop1 import SECTIONS_BY_ID
 from app.domain.source_file import SourceFile
 from app.domain.user import User
+from app.infra.crypto import encrypt_api_key
 from app.infra.db import get_session
 from app.infra.settings import api_settings
 from app.infra.telemetry import instrument_app
@@ -79,6 +87,110 @@ class PromotionRequestPayload(BaseModel):
 
 class PromotionDecisionPayload(BaseModel):
     decision: Literal["approved", "rejected"]
+
+
+class ResubmitPayload(BaseModel):
+    approver_id: str
+    note: str
+
+
+class DistributionLinkPayload(BaseModel):
+    created_by: str
+    ttl_days: int = 30
+
+
+class DataSourceCredentialPayload(BaseModel):
+    source: DataSourceKind
+    api_key: str
+    rate_limit_per_hour: int = 60
+
+
+class MarketSegmentPayload(BaseModel):
+    segment_name: str
+    youtube_channel_keywords: list[str] = []
+    news_sources: list[str] = []
+    reddit_communities: list[str] = []
+    website_urls: list[str] = []
+    max_competitors_to_track: int = 10
+
+
+@app.post("/brands/{brand_id}/data-sources/credentials")
+async def set_data_source_credential(
+    brand_id: str, payload: DataSourceCredentialPayload, kb_id: str = Depends(resolve_brand_scope)
+) -> dict:
+    with get_session() as session:
+        session.execute(
+            """INSERT INTO data_source_credential (brand_id, source, encrypted_api_key, rate_limit_per_hour)
+               VALUES (:brand, :source, :key, :limit)
+               ON CONFLICT (brand_id, source) DO UPDATE SET
+                   encrypted_api_key = EXCLUDED.encrypted_api_key,
+                   rate_limit_per_hour = EXCLUDED.rate_limit_per_hour""",
+            {
+                "brand": brand_id,
+                "source": payload.source,
+                "key": encrypt_api_key(payload.api_key),
+                "limit": payload.rate_limit_per_hour,
+            },
+        )
+        session.commit()
+    return {"status": "saved", "source": payload.source}
+
+
+@app.get("/brands/{brand_id}/data-sources/credentials")
+async def list_data_source_credentials(brand_id: str, kb_id: str = Depends(resolve_brand_scope)) -> list[dict]:
+    # Never returns api_key or encrypted_api_key -- confirming a credential
+    # exists is fine, its value never leaves storage once written.
+    with get_session() as session:
+        rows = session.execute(
+            "SELECT source, rate_limit_per_hour, created_at, last_used_at "
+            "FROM data_source_credential WHERE brand_id = :brand",
+            {"brand": brand_id},
+        ).mappings().all()
+    return [dict(row) for row in rows]
+
+
+@app.put("/brands/{brand_id}/market-segments")
+async def set_market_segment(
+    brand_id: str, payload: MarketSegmentPayload, kb_id: str = Depends(resolve_brand_scope)
+) -> MarketSegment:
+    segment = MarketSegment(brand_id=brand_id, **payload.model_dump())
+    with get_session() as session:
+        session.execute(
+            """INSERT INTO market_segment (brand_id, segment_name, youtube_channel_keywords,
+                                            news_sources, reddit_communities, website_urls,
+                                            max_competitors_to_track)
+               VALUES (:brand, :name, :yt, :news, :reddit, :sites, :max)
+               ON CONFLICT (brand_id) DO UPDATE SET
+                   segment_name = EXCLUDED.segment_name,
+                   youtube_channel_keywords = EXCLUDED.youtube_channel_keywords,
+                   news_sources = EXCLUDED.news_sources,
+                   reddit_communities = EXCLUDED.reddit_communities,
+                   website_urls = EXCLUDED.website_urls,
+                   max_competitors_to_track = EXCLUDED.max_competitors_to_track""",
+            {
+                "brand": brand_id,
+                "name": segment.segment_name,
+                "yt": segment.youtube_channel_keywords,
+                "news": segment.news_sources,
+                "reddit": segment.reddit_communities,
+                "sites": segment.website_urls,
+                "max": segment.max_competitors_to_track,
+            },
+        )
+        session.commit()
+    return segment
+
+
+@app.get("/brands/{brand_id}/market-segments")
+async def get_market_segment(brand_id: str, kb_id: str = Depends(resolve_brand_scope)) -> MarketSegment | None:
+    with get_session() as session:
+        row = session.execute(
+            "SELECT brand_id, segment_name, youtube_channel_keywords, news_sources, "
+            "reddit_communities, website_urls, max_competitors_to_track "
+            "FROM market_segment WHERE brand_id = :brand",
+            {"brand": brand_id},
+        ).mappings().first()
+    return MarketSegment(**row) if row else None
 
 
 @app.get("/brands/{brand_id}/sections/{section_id}/team-input")
@@ -222,6 +334,51 @@ async def approve_document(document_id: str, decision: ApprovalDecision) -> Mark
     document.status = decision.decision
     _save_document(document)
     _save_approval_gate(document_id, decision, checkpoint)
+    _save_approval_event(document_id, decision.decision, decision.approver_id, decision.note, checkpoint)
+    return document
+
+
+@app.get("/documents/{document_id}/approval-history")
+async def get_approval_history(document_id: str) -> list[ApprovalEvent]:
+    # current_approval_status is a query over this list, never a column a
+    # reject-then-reapprove sequence could overwrite (step5_trust_boundary.md
+    # Part C) -- /approval-gate above is the pre-Step-5 single-row view, kept
+    # read-only for backward compat until every caller is repointed here.
+    return _load_approval_history(document_id)
+
+
+@app.post("/documents/{document_id}/rerun")
+async def rerun_document(document_id: str) -> MarketResearchDocument:
+    """New brand material was uploaded to address the rejection -- re-runs
+    ingest/retrieval/synthesis from scratch, producing a new pending_approval
+    document."""
+    document = _load_document(document_id)
+    if document is None:
+        raise HTTPException(404, detail=f"no such document: {document_id}")
+    if document.status != "rejected":
+        raise HTTPException(409, detail=f"cannot rerun from {document.status}")
+
+    from app.orchestration.section_runner import assemble_document, run_all_sections
+
+    results = run_all_sections(document.brand_id)
+    new_document = assemble_document(document.brand_id, results)
+    _save_document(new_document)
+    return new_document
+
+
+@app.post("/documents/{document_id}/resubmit")
+async def resubmit_document(document_id: str, payload: ResubmitPayload) -> MarketResearchDocument:
+    """The rejection was about the write-up, not the evidence -- addressed via
+    a strategic_note. Re-enters review without regenerating."""
+    document = _load_document(document_id)
+    if document is None:
+        raise HTTPException(404, detail=f"no such document: {document_id}")
+    if document.status != "rejected":
+        raise HTTPException(409, detail=f"cannot resubmit from {document.status}")
+
+    _save_approval_event(document_id, "resubmitted", payload.approver_id, payload.note, None)
+    document.status = "pending_approval"
+    _save_document(document)
     return document
 
 
@@ -245,6 +402,93 @@ async def distribute_document(document_id: str, payload: DistributionPayload) ->
 @app.get("/documents/{document_id}/distribution")
 async def get_distribution(document_id: str) -> DistributionRecord | None:
     return _load_distribution(document_id)
+
+
+@app.get("/documents/{document_id}/distribution-history")
+async def get_distribution_history(document_id: str) -> list[DistributionEvent]:
+    with get_session() as session:
+        rows = session.execute(
+            "SELECT id, document_id, channel, distributed_by, distributed_at "
+            "FROM distribution_event WHERE document_id = :id ORDER BY distributed_at ASC",
+            {"id": document_id},
+        ).mappings().all()
+    return [DistributionEvent(**row) for row in rows]
+
+
+@app.post("/documents/{document_id}/distribution-links")
+async def create_distribution_link(document_id: str, payload: DistributionLinkPayload) -> dict:
+    # A client link is not an operator credential -- it authorizes exactly
+    # this one document's read-only ClientMarketResearchView projection,
+    # structurally, not by an if-check a future endpoint could forget.
+    document = _load_document(document_id)
+    if document is None:
+        raise HTTPException(404, detail=f"no such document: {document_id}")
+    if document.status != "approved":
+        raise HTTPException(422, detail="cannot distribute before approval")
+
+    link_id = f"link-{uuid4().hex[:12]}"
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    expires_at = datetime.now(UTC) + timedelta(days=payload.ttl_days)
+    with get_session() as session:
+        session.execute(
+            """INSERT INTO distribution_link (id, document_id, token_hash, created_by, expires_at)
+               VALUES (:id, :doc, :hash, :created_by, :expires)""",
+            {
+                "id": link_id,
+                "doc": document_id,
+                "hash": token_hash,
+                "created_by": payload.created_by,
+                "expires": expires_at,
+            },
+        )
+        session.commit()
+    _save_distribution_event(document_id, "client", payload.created_by)
+    return {"id": link_id, "token": token, "expires_at": expires_at.isoformat()}
+
+
+@app.get("/documents/{document_id}/distribution-links")
+async def list_distribution_links(document_id: str) -> list[DistributionLink]:
+    # Metadata only -- the token itself was never persisted (only its hash),
+    # so there is no response shape that could leak it after creation.
+    with get_session() as session:
+        rows = session.execute(
+            "SELECT id, document_id, created_by, expires_at, revoked, created_at "
+            "FROM distribution_link WHERE document_id = :id ORDER BY created_at DESC",
+            {"id": document_id},
+        ).mappings().all()
+    return [DistributionLink(**row) for row in rows]
+
+
+@app.post("/distribution-links/{link_id}/revoke")
+async def revoke_distribution_link(link_id: str) -> dict:
+    with get_session() as session:
+        result = session.execute(
+            "UPDATE distribution_link SET revoked = TRUE WHERE id = :id", {"id": link_id}
+        )
+        session.commit()
+    if result.rowcount == 0:
+        raise HTTPException(404, detail=f"no such distribution link: {link_id}")
+    return {"id": link_id, "revoked": True}
+
+
+@app.get("/client/view/{token}")
+async def client_view(token: str) -> ClientMarketResearchView:
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    with get_session() as session:
+        row = session.execute(
+            "SELECT document_id, revoked, expires_at FROM distribution_link WHERE token_hash = :h",
+            {"h": token_hash},
+        ).mappings().first()
+    # 404, not 403, for anything a caller isn't authorized to know exists at
+    # all -- never confirm a token ever existed (step5_trust_boundary.md
+    # "existence must not leak").
+    if row is None or row["revoked"] or row["expires_at"] < datetime.now(UTC):
+        raise HTTPException(404)
+    document = _load_document(row["document_id"])
+    if document is None:
+        raise HTTPException(404)
+    return project_for_client(document)
 
 
 @app.post("/core/staging/build")
@@ -536,6 +780,50 @@ def _load_approval_gate(document_id: str) -> ApprovalGateRecord | None:
             {"id": document_id},
         ).mappings().first()
     return ApprovalGateRecord(**row) if row else None
+
+
+def _save_approval_event(
+    document_id: str,
+    decision: str,
+    approver_id: str,
+    note: str | None,
+    checkpoint: QualityCheckpoint | None,
+) -> None:
+    import json
+
+    with get_session() as session:
+        session.execute(
+            """INSERT INTO approval_event (document_id, decision, approver_id, note, checkpoint)
+               VALUES (:document_id, :decision, :approver_id, :note, (:checkpoint)::jsonb)""",
+            {
+                "document_id": document_id,
+                "decision": decision,
+                "approver_id": approver_id,
+                "note": note,
+                "checkpoint": json.dumps(checkpoint.model_dump()) if checkpoint else None,
+            },
+        )
+        session.commit()
+
+
+def _load_approval_history(document_id: str) -> list[ApprovalEvent]:
+    with get_session() as session:
+        rows = session.execute(
+            "SELECT id, document_id, decision, approver_id, note, checkpoint, decided_at "
+            "FROM approval_event WHERE document_id = :id ORDER BY decided_at ASC",
+            {"id": document_id},
+        ).mappings().all()
+    return [ApprovalEvent(**row) for row in rows]
+
+
+def _save_distribution_event(document_id: str, channel: str, distributed_by: str) -> None:
+    with get_session() as session:
+        session.execute(
+            """INSERT INTO distribution_event (document_id, channel, distributed_by)
+               VALUES (:document_id, :channel, :distributed_by)""",
+            {"document_id": document_id, "channel": channel, "distributed_by": distributed_by},
+        )
+        session.commit()
 
 
 def _save_distribution(record: DistributionRecord) -> None:

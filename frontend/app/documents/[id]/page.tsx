@@ -2,12 +2,22 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { use } from "react";
-import { approveDocument, ApiError, getCheckpoint, getDocument } from "@/lib/api";
+import {
+  approveDocument,
+  ApiError,
+  getApprovalHistory,
+  getCheckpoint,
+  getDocument,
+  rerunDocument,
+  resubmitDocument,
+} from "@/lib/api";
 import { ApproveButton } from "@/components/ApproveButton";
 import { ClaimList } from "@/components/ClaimList";
+import { DecisionHistoryStrip } from "@/components/DecisionHistoryStrip";
 import { DistributionPanel } from "@/components/DistributionPanel";
 import { PersonaList } from "@/components/PersonaList";
 import { QualityCheckpointPanel } from "@/components/QualityCheckpointPanel";
+import { RejectedStateActions } from "@/components/RejectedStateActions";
 import { SectionOutline } from "@/components/SectionOutline";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StrategicNotesPanel } from "@/components/StrategicNotesPanel";
@@ -40,11 +50,34 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     queryFn: () => getCheckpoint(documentId),
   });
 
+  const historyKey = ["approval-history", documentId];
+  const historyQuery = useQuery({
+    queryKey: historyKey,
+    queryFn: () => getApprovalHistory(documentId),
+  });
+
   const approve = useMutation({
     mutationFn: () => approveDocument(documentId, "team_lead", "approved"),
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKey, updated);
       queryClient.invalidateQueries({ queryKey: checkpointKey });
+      queryClient.invalidateQueries({ queryKey: historyKey });
+    },
+  });
+
+  const rerun = useMutation({
+    mutationFn: () => rerunDocument(documentId),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKey, updated);
+      queryClient.invalidateQueries({ queryKey: checkpointKey });
+    },
+  });
+
+  const resubmit = useMutation({
+    mutationFn: (note: string) => resubmitDocument(documentId, "team_lead", note),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKey, updated);
+      queryClient.invalidateQueries({ queryKey: historyKey });
     },
   });
 
@@ -103,6 +136,16 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
           Approval blocked — the quality checkpoint above must pass first.
         </p>
       )}
+
+      <RejectedStateActions
+        status={document.status}
+        onRerun={() => rerun.mutate()}
+        onResubmit={(note) => resubmit.mutate(note)}
+        rerunPending={rerun.isPending}
+        resubmitPending={resubmit.isPending}
+      />
+
+      {historyQuery.data && <DecisionHistoryStrip events={historyQuery.data} />}
 
       <StrategicNotesPanel documentId={documentId} />
 

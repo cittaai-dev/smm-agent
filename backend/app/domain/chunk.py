@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel
@@ -30,3 +31,11 @@ class Chunk(BaseModel):
     degraded: bool = False
     heading_path: list[str] = []
     strategy: ChunkStrategy = "L1"
+    # Live-collected data only (step5_trust_boundary.md Part D §6) -- null
+    # for Brand Workspace uploads and Core's curated documents, which have no
+    # meaningful staleness window. dense.py/sparse.py filter valid_until at
+    # the SQL WHERE clause, not here: a stale chunk should never be fetched
+    # in the first place, not fetched-then-discarded.
+    collected_at: datetime | None = None
+    valid_until: datetime | None = None
+    data_source: str | None = None
