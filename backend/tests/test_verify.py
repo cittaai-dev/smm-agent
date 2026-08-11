@@ -1,7 +1,8 @@
+from app.domain.audience_persona import AudiencePersonaDraft
 from app.domain.chunk import Chunk
 from app.domain.claim import ClaimDraft, DerivedClaimDraft, VerifiedClaim
 from app.domain.retrieval import RetrievalPlan, RetrievedContext
-from app.domain.verify import verify_claims, verify_derived_claims
+from app.domain.verify import verify_audience_personas, verify_claims, verify_derived_claims
 
 _PLAN = RetrievalPlan(sub_queries=["q"])
 _CHUNK = Chunk(chunk_id="c1", kb_id="run:b", doc_id="d1", block_span=(0, 0), text="evidence")
@@ -76,3 +77,64 @@ def test_derived_claim_citing_unknown_claim_id_rejected():
     [result] = verify_derived_claims(claims, [_UPSTREAM_VERIFIED])
     assert not result.verified
     assert result.rejection_reason == "missing_source_claim"
+
+
+def test_audience_persona_grounded_and_complete_is_verified():
+    personas = [
+        AudiencePersonaDraft(
+            section="target_audience", name="Weekend warrior",
+            pain_points=["Limited free time"], interests=["Quality gear"], chunk_ids=["c1"],
+        )
+    ]
+    [result] = verify_audience_personas(personas, _CONTEXT)
+    assert result.verified
+    assert result.rejection_reason is None
+    assert result.persona_id
+
+
+def test_audience_persona_missing_pain_points_rejected_as_incomplete():
+    personas = [
+        AudiencePersonaDraft(
+            section="target_audience", name="Weekend warrior",
+            pain_points=[], interests=["Quality gear"], chunk_ids=["c1"],
+        )
+    ]
+    [result] = verify_audience_personas(personas, _CONTEXT)
+    assert not result.verified
+    assert result.rejection_reason == "incomplete_persona"
+
+
+def test_audience_persona_missing_interests_rejected_as_incomplete():
+    personas = [
+        AudiencePersonaDraft(
+            section="target_audience", name="Weekend warrior",
+            pain_points=["Limited free time"], interests=[], chunk_ids=["c1"],
+        )
+    ]
+    [result] = verify_audience_personas(personas, _CONTEXT)
+    assert not result.verified
+    assert result.rejection_reason == "incomplete_persona"
+
+
+def test_audience_persona_with_no_citation_rejected():
+    personas = [
+        AudiencePersonaDraft(
+            section="target_audience", name="Weekend warrior",
+            pain_points=["Limited free time"], interests=["Quality gear"], chunk_ids=[],
+        )
+    ]
+    [result] = verify_audience_personas(personas, _CONTEXT)
+    assert not result.verified
+    assert result.rejection_reason == "no_citation"
+
+
+def test_audience_persona_citing_fabricated_chunk_rejected():
+    personas = [
+        AudiencePersonaDraft(
+            section="target_audience", name="Weekend warrior",
+            pain_points=["Limited free time"], interests=["Quality gear"], chunk_ids=["does-not-exist"],
+        )
+    ]
+    [result] = verify_audience_personas(personas, _CONTEXT)
+    assert not result.verified
+    assert result.rejection_reason == "missing_chunk"

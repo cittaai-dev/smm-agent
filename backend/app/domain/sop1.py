@@ -32,6 +32,10 @@ class SectionSpec(BaseModel):
     requires_core: bool
     retrieval_mode: RetrievalMode
     depends_on: list[SectionId] = []
+    # target_audience only, for now -- see domain/audience_persona.py. A flag
+    # on the registry rather than a hardcoded section-id check in graph.py,
+    # matching how retrieval_mode/requires_core already drive dispatch.
+    extracts_audience_personas: bool = False
 
 
 SECTION_LABELS: dict[SectionId, str] = {
@@ -68,6 +72,7 @@ SOP1_SECTIONS: list[SectionSpec] = [
         label=SECTION_LABELS["target_audience"],
         requires_core=False,
         retrieval_mode="union",
+        extracts_audience_personas=True,
     ),
     SectionSpec(
         id="customer_needs",

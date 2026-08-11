@@ -36,6 +36,20 @@ class LLMSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SMM_LLM_", env_file=".env", extra="ignore")
 
 
+class RerankSettings(BaseSettings):
+    # Self-hosted cross-encoder, not a vendor API -- zero marginal cost per
+    # call and no third external dependency on the query path. The real cost
+    # is operational: sentence-transformers pulls in torch (a genuinely heavy
+    # install) and the model itself is ~1GB on first download, so this is
+    # off-able rather than assumed -- an environment without that budget
+    # degrades to unreranked fused order (P5), not a hard failure.
+    enabled: bool = True
+    model_name: str = "BAAI/bge-reranker-base"
+
+    model_config = SettingsConfigDict(env_prefix="SMM_RERANK_", env_file=".env", extra="ignore")
+
+
 db_settings = DBSettings()
 api_settings = ApiSettings()
 llm_settings = LLMSettings()
+rerank_settings = RerankSettings()

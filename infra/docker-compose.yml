@@ -32,6 +32,12 @@ services:
       # only ever worked in local dev because backend/worker ran as bare
       # processes sharing the host filesystem, not containers.
       - uploads:/app/uploads
+      # The cross-encoder reranker (retrieval/rerank.py) downloads a ~1GB
+      # model from Hugging Face on first use if not cached -- without a
+      # persistent volume, every container restart re-downloads it, which is
+      # both slow and a new dependency on the query path exactly where P2/P5
+      # care most about latency floors.
+      - hf-cache:/root/.cache/huggingface
   worker-ingest:
     build: ../backend
     command: celery -A app.infra.celery_app worker -Q ingest --loglevel=info --concurrency=4
@@ -53,3 +59,4 @@ services:
 volumes:
   pgdata:
   uploads:
+  hf-cache:

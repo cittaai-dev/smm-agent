@@ -40,6 +40,7 @@ def run_section(brand_id: str, spec: SectionSpec, prior: dict[str, SectionResult
         brand_id=brand_id,
         status=status,
         claims=result.deliverable.claims,
+        personas=result.personas,
         call_site_trace=result.deliverable.call_site_trace,
     )
 

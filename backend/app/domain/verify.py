@@ -1,13 +1,20 @@
 import hashlib
 
+from app.domain.audience_persona import AudiencePersonaDraft, VerifiedAudiencePersona
 from app.domain.claim import ClaimDraft, DerivedClaimDraft, VerifiedClaim
 from app.domain.retrieval import RetrievedContext
+from app.infra.telemetry import record_claim_verification
 
 
 def compute_claim_id(section: str, text: str, *keys: str) -> str:
     """Content-addressed like chunk_id (P6): same claim content -> same id, so a
     derived claim downstream can cite it by a stable, reproducible reference."""
     basis = ":".join([section, text, *sorted(keys)])
+    return hashlib.sha256(basis.encode()).hexdigest()
+
+
+def compute_persona_id(section: str, name: str, *keys: str) -> str:
+    basis = ":".join([section, name, *sorted(keys)])
     return hashlib.sha256(basis.encode()).hexdigest()
 
 
@@ -50,6 +57,8 @@ def verify_claims(claims: list[ClaimDraft], context: RetrievedContext) -> list[V
                 verified=True,
             )
         )
+    for claim in out:
+        record_claim_verification(claim.section, claim.verified)
     return out
 
 
@@ -95,6 +104,77 @@ def verify_derived_claims(
                 section=claim.section,
                 text=claim.text,
                 source_claim_ids=claim.source_claim_ids,
+                verified=True,
+            )
+        )
+    for claim in out:
+        record_claim_verification(claim.section, claim.verified)
+    return out
+
+
+def verify_audience_personas(
+    personas: list[AudiencePersonaDraft], context: RetrievedContext
+) -> list[VerifiedAudiencePersona]:
+    """Same P4 discipline as verify_claims: a persona's grounding is a
+    deterministic check against the assembled context, never the model's own
+    say-so. incomplete_persona is a structural check (does it have both
+    pain_points and interests), not the model judging its own quality --
+    matches how the doc's own evaluate_checkpoint reasons about personas, just
+    enforced here instead of left to a checkpoint to notice later."""
+    known = {c.chunk_id for c in context.chunks}
+    out: list[VerifiedAudiencePersona] = []
+    for p in personas:
+        persona_id = compute_persona_id(p.section, p.name, *p.chunk_ids)
+        if not p.pain_points or not p.interests:
+            out.append(
+                VerifiedAudiencePersona(
+                    persona_id=persona_id,
+                    section=p.section,
+                    name=p.name,
+                    pain_points=p.pain_points,
+                    interests=p.interests,
+                    chunk_ids=p.chunk_ids,
+                    verified=False,
+                    rejection_reason="incomplete_persona",
+                )
+            )
+            continue
+        if not p.chunk_ids:
+            out.append(
+                VerifiedAudiencePersona(
+                    persona_id=persona_id,
+                    section=p.section,
+                    name=p.name,
+                    pain_points=p.pain_points,
+                    interests=p.interests,
+                    verified=False,
+                    rejection_reason="no_citation",
+                )
+            )
+            continue
+        missing = [cid for cid in p.chunk_ids if cid not in known]
+        if missing:
+            out.append(
+                VerifiedAudiencePersona(
+                    persona_id=persona_id,
+                    section=p.section,
+                    name=p.name,
+                    pain_points=p.pain_points,
+                    interests=p.interests,
+                    chunk_ids=p.chunk_ids,
+                    verified=False,
+                    rejection_reason="missing_chunk",
+                )
+            )
+            continue
+        out.append(
+            VerifiedAudiencePersona(
+                persona_id=persona_id,
+                section=p.section,
+                name=p.name,
+                pain_points=p.pain_points,
+                interests=p.interests,
+                chunk_ids=p.chunk_ids,
                 verified=True,
             )
         )
