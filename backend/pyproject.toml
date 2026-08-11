@@ -37,7 +37,9 @@ dependencies = [
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
     "ruff>=0.7",
+    "mypy>=1.13",
 ]
 
 [build-system]
@@ -49,6 +51,9 @@ packages = ["app"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "slow: downloads/runs a real model or hits a real external service -- excluded from per-push CI (see .github/workflows/nightly.yml), run explicitly or nightly",
+]
 
 [tool.ruff]
 line-length = 110

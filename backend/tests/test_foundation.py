@@ -183,7 +183,7 @@ def test_rerun_after_insufficient_grounding_overwrites_stale_claims(
 
     ingest_file(brand_id="test-brand", file_path=sample_file)
 
-    def _empty(section: str, context):
+    def _empty(section: str, context, cost_tracker=None):
         return []
 
     monkeypatch.setattr("app.orchestration.llm.call_synthesize", _empty)
@@ -192,7 +192,7 @@ def test_rerun_after_insufficient_grounding_overwrites_stale_claims(
     deliverable_id = first.json()["id"]
     assert first.json()["status"] == "insufficient_grounding"
 
-    def _grounded(section: str, context):
+    def _grounded(section: str, context, cost_tracker=None):
         chunk = context.chunks[0]
         return [ClaimDraft(section=section, text="Acme Roasters sells specialty coffee.", chunk_id=chunk.chunk_id)]
 

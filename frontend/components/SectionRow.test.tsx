@@ -8,7 +8,9 @@ const base: SectionResult = {
   brand_id: "acme",
   status: "verified",
   claims: [],
+  personas: [],
   call_site_trace: {},
+  cost_usd: 0,
 };
 
 describe("SectionRow", () => {

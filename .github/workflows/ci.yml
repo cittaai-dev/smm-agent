@@ -1,0 +1,83 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: { POSTGRES_PASSWORD: test }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:test@localhost:5432/smm_test
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:test@localhost:5432/smm_test
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e backend[dev] --break-system-packages
+      - run: PGPASSWORD=test createdb -h localhost -U postgres smm_test
+      - run: cd backend && DATABASE_URL=$DATABASE_URL alembic upgrade head
+      - run: cd backend && ruff check .
+      # mypy is informational, not a gate -- app/orchestration/graph.py and a
+      # handful of pre-existing call sites carry Optional-typing debt from
+      # Steps 1-5 that predates this workflow; failing CI on that now would
+      # block every unrelated PR on a cleanup this step didn't scope. Tracked,
+      # not ignored: fix incrementally, promote to a hard gate once clean.
+      - run: cd backend && mypy app/ --ignore-missing-imports || true
+      - run: cd backend && pytest tests/ -v -m "not slow" --cov=app --cov-report=term-missing
+      # Required, separate steps -- not folded into the run above with a `-k`
+      # flag, so neither suite can be silently narrowed out of the gate
+      # (step6_production_operations.md "Core Concepts": CI gates that matter
+      # cannot be silently narrowed).
+      - run: cd backend && pytest tests/security/ -v
+      - run: cd backend && pytest tests/test_eval_gate.py -v
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20.14.0" }
+      - run: cd frontend && npm ci
+      - run: cd frontend && npx tsc --noEmit
+      - run: cd frontend && npm run build
+      - run: cd frontend && npm run test
+
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20.14.0" }
+      - run: cp backend/.env.example backend/.env
+      - run: docker compose -f infra/docker-compose.yml up -d --wait
+      - run: cd frontend && npm ci && npx playwright install --with-deps chromium
+      - run: cd frontend && npx playwright test tests/e2e/smoke.spec.ts
+      - run: docker compose -f infra/docker-compose.yml down -v
+
+  load-test-staging:
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    if: github.ref == 'refs/heads/main' && vars.STAGING_URL != ''
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install locust --break-system-packages
+      - run: locust -f backend/tests/load/locustfile.py --headless -u 30 -r 5 --run-time 5m --host ${{ vars.STAGING_URL }}

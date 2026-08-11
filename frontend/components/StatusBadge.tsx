@@ -18,7 +18,10 @@ const LABELS: Record<DocumentStatus, string> = {
 
 export function StatusBadge({ status }: { status: DocumentStatus }) {
   return (
-    <span className={`rounded-full px-3 py-1 text-sm font-medium ${STYLES[status]}`}>
+    <span
+      data-testid="status-badge"
+      className={`rounded-full px-3 py-1 text-sm font-medium ${STYLES[status]}`}
+    >
       {LABELS[status]}
     </span>
   );

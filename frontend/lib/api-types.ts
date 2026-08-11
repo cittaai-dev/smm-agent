@@ -24,6 +24,98 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Live */
+        get: operations["live_health_live_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ready */
+        get: operations["ready_health_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health/data-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Data Sources Health
+         * @description Operational visibility over collection_job_status (migration 0008) --
+         *     aggregated across brands, not scoped to one kb_id: this is an operator
+         *     dashboard, not a tenant-facing endpoint.
+         */
+        get: operations["data_sources_health_health_data_sources_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/brands/{brand_id}/data-sources/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Data Source Credentials */
+        get: operations["list_data_source_credentials_brands__brand_id__data_sources_credentials_get"];
+        put?: never;
+        /** Set Data Source Credential */
+        post: operations["set_data_source_credential_brands__brand_id__data_sources_credentials_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/brands/{brand_id}/market-segments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Market Segment */
+        get: operations["get_market_segment_brands__brand_id__market_segments_get"];
+        /** Set Market Segment */
+        put: operations["set_market_segment_brands__brand_id__market_segments_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/brands/{brand_id}/sections/{section_id}/team-input": {
         parameters: {
             query?: never;
@@ -163,6 +255,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/documents/{document_id}/approval-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Approval History */
+        get: operations["get_approval_history_documents__document_id__approval_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/rerun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rerun Document
+         * @description New brand material was uploaded to address the rejection -- re-runs
+         *     ingest/retrieval/synthesis from scratch, producing a new pending_approval
+         *     document.
+         */
+        post: operations["rerun_document_documents__document_id__rerun_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/resubmit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resubmit Document
+         * @description The rejection was about the write-up, not the evidence -- addressed via
+         *     a strategic_note. Re-enters review without regenerating.
+         */
+        post: operations["resubmit_document_documents__document_id__resubmit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/documents/{document_id}/distribute": {
         parameters: {
             query?: never;
@@ -191,6 +343,143 @@ export interface paths {
         get: operations["get_distribution_documents__document_id__distribution_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/distribution-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Distribution History */
+        get: operations["get_distribution_history_documents__document_id__distribution_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/distribution-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Distribution Links */
+        get: operations["list_distribution_links_documents__document_id__distribution_links_get"];
+        put?: never;
+        /** Create Distribution Link */
+        post: operations["create_distribution_link_documents__document_id__distribution_links_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/distribution-links/{link_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Distribution Link */
+        post: operations["revoke_distribution_link_distribution_links__link_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/client/view/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Client View */
+        get: operations["client_view_client_view__token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/core/staging/build": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger Staging Build */
+        post: operations["trigger_staging_build_core_staging_build_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/core/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Core Versions */
+        get: operations["list_core_versions_core_versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/core/staging/{version}/promotion-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Promotion Request */
+        post: operations["create_promotion_request_core_staging__version__promotion_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/core/promotion-requests/{request_id}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Promotion */
+        post: operations["decide_promotion_core_promotion_requests__request_id__decide_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -265,6 +554,32 @@ export interface components {
             note?: string | null;
         };
         /**
+         * ApprovalEvent
+         * @description Append-only (step5_trust_boundary.md Part C) -- current_approval_status
+         *     is a query over these, never a column that a reject-then-reapprove
+         *     sequence could overwrite. checkpoint is the QualityCheckpoint as it stood
+         *     *at decision time* (P7); resubmitted events carry no checkpoint since
+         *     nothing new was evaluated, only the status transitioned.
+         */
+        ApprovalEvent: {
+            /** Id */
+            id?: number | null;
+            /** Document Id */
+            document_id: string;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approved" | "rejected" | "resubmitted";
+            /** Approver Id */
+            approver_id: string;
+            /** Note */
+            note?: string | null;
+            checkpoint?: components["schemas"]["QualityCheckpoint"] | null;
+            /** Decided At */
+            decided_at?: string | null;
+        };
+        /**
          * ApprovalGateRecord
          * @description Provenance, not the current-state field (document.status already carries
          *     that) -- the QualityCheckpoint as it stood *at decision time*, who decided,
@@ -291,6 +606,52 @@ export interface components {
             /** Source Kind */
             source_kind?: string | null;
         };
+        /** ClientClaim */
+        ClientClaim: {
+            /** Text */
+            text: string;
+        };
+        /** ClientMarketResearchView */
+        ClientMarketResearchView: {
+            /** Brand Id */
+            brand_id: string;
+            /** Sections */
+            sections: {
+                [key: string]: components["schemas"]["ClientClaim"][];
+            };
+            /** Personas */
+            personas: components["schemas"]["ClientPersona"][];
+        };
+        /** ClientPersona */
+        ClientPersona: {
+            /** Name */
+            name: string;
+            /**
+             * Pain Points
+             * @default []
+             */
+            pain_points: string[];
+            /**
+             * Interests
+             * @default []
+             */
+            interests: string[];
+        };
+        /** DataSourceCredentialPayload */
+        DataSourceCredentialPayload: {
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "google_trends" | "newsapi" | "youtube" | "scrapy_competitor";
+            /** Api Key */
+            api_key: string;
+            /**
+             * Rate Limit Per Hour
+             * @default 60
+             */
+            rate_limit_per_hour: number;
+        };
         /** Deliverable */
         Deliverable: {
             /** Id */
@@ -308,6 +669,74 @@ export interface components {
             call_site_trace: {
                 [key: string]: number;
             };
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Cost Usd
+             * @default 0
+             */
+            cost_usd: number;
+        };
+        /**
+         * DistributionEvent
+         * @description Append-only (step5_trust_boundary.md Part C), same discipline as
+         *     ApprovalEvent -- multiple distribution events for one document must not
+         *     silently collapse into a single overwritten row.
+         */
+        DistributionEvent: {
+            /** Id */
+            id?: number | null;
+            /** Document Id */
+            document_id: string;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "internal" | "client";
+            /** Distributed By */
+            distributed_by: string;
+            /** Distributed At */
+            distributed_at?: string | null;
+        };
+        /**
+         * DistributionLink
+         * @description Authorizes exactly one document's read-only ClientMarketResearchView
+         *     projection, nothing else in the system (step5_trust_boundary.md Part B
+         *     §10). document_id, not "deliverable_id" -- this codebase's MarketResearchDocument
+         *     is what /documents/{document_id}/* routes already operate on; Deliverable
+         *     (domain/deliverable.py) is the earlier Step 1 single-section concept and
+         *     isn't what client links point at. The token itself is never persisted --
+         *     only its hash, same content-addressed-secret discipline as api_key.key_hash.
+         */
+        DistributionLink: {
+            /** Id */
+            id: string;
+            /** Document Id */
+            document_id: string;
+            /** Created By */
+            created_by: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Revoked
+             * @default false
+             */
+            revoked: boolean;
+            /** Created At */
+            created_at?: string | null;
+        };
+        /** DistributionLinkPayload */
+        DistributionLinkPayload: {
+            /** Created By */
+            created_by: string;
+            /**
+             * Ttl Days
+             * @default 30
+             */
+            ttl_days: number;
         };
         /** DistributionPayload */
         DistributionPayload: {
@@ -330,10 +759,49 @@ export interface components {
              */
             distributed_at: string;
         };
+        /**
+         * EvalGateResult
+         * @description Zero-LLM, arithmetic-only verdict over an already-verified corpus
+         *     (app/eval/gate.py) -- the eval gate is necessary, not sufficient; a
+         *     passing corpus still requires an explicit human /decide call.
+         */
+        EvalGateResult: {
+            /** Citation Rejection Rate */
+            citation_rejection_rate: number;
+            /** Degraded Ratio */
+            degraded_ratio: number;
+            /** L0 Ratio */
+            l0_ratio: number;
+            /** Coverage Ok */
+            coverage_ok: boolean;
+            /** Passed */
+            passed: boolean;
+            /** Thresholds */
+            thresholds: {
+                [key: string]: number;
+            };
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** KBVersion */
+        KBVersion: {
+            /** Kb Id */
+            kb_id: string;
+            /** Version */
+            version: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "staging" | "promoted" | "rejected";
+            eval_gate_result?: components["schemas"]["EvalGateResult"] | null;
+            /** Promoted At */
+            promoted_at?: string | null;
+            /** Promoted By */
+            promoted_by?: string | null;
         };
         /** MarketResearchDocument */
         MarketResearchDocument: {
@@ -354,6 +822,91 @@ export interface components {
             call_site_trace: {
                 [key: string]: number;
             };
+            /**
+             * Cost Usd
+             * @default 0
+             */
+            cost_usd: number;
+        };
+        /**
+         * MarketSegment
+         * @description Explicit whitelist of where competitor discovery is allowed to look --
+         *     never open-ended crawling (step5_trust_boundary.md Part D §5). Set up by
+         *     a human (Team Lead) once per brand.
+         */
+        MarketSegment: {
+            /** Brand Id */
+            brand_id: string;
+            /** Segment Name */
+            segment_name: string;
+            /**
+             * Youtube Channel Keywords
+             * @default []
+             */
+            youtube_channel_keywords: string[];
+            /**
+             * News Sources
+             * @default []
+             */
+            news_sources: string[];
+            /**
+             * Reddit Communities
+             * @default []
+             */
+            reddit_communities: string[];
+            /**
+             * Website Urls
+             * @default []
+             */
+            website_urls: string[];
+            /**
+             * Max Competitors To Track
+             * @default 10
+             */
+            max_competitors_to_track: number;
+        };
+        /** MarketSegmentPayload */
+        MarketSegmentPayload: {
+            /** Segment Name */
+            segment_name: string;
+            /**
+             * Youtube Channel Keywords
+             * @default []
+             */
+            youtube_channel_keywords: string[];
+            /**
+             * News Sources
+             * @default []
+             */
+            news_sources: string[];
+            /**
+             * Reddit Communities
+             * @default []
+             */
+            reddit_communities: string[];
+            /**
+             * Website Urls
+             * @default []
+             */
+            website_urls: string[];
+            /**
+             * Max Competitors To Track
+             * @default 10
+             */
+            max_competitors_to_track: number;
+        };
+        /** PromotionDecisionPayload */
+        PromotionDecisionPayload: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approved" | "rejected";
+        };
+        /** PromotionRequestPayload */
+        PromotionRequestPayload: {
+            /** Source Summary */
+            source_summary: string;
         };
         /** QualityCheckpoint */
         QualityCheckpoint: {
@@ -365,6 +918,13 @@ export interface components {
             personas_grounded: boolean;
             /** Findings Lead To Recommendations */
             findings_lead_to_recommendations: boolean;
+        };
+        /** ResubmitPayload */
+        ResubmitPayload: {
+            /** Approver Id */
+            approver_id: string;
+            /** Note */
+            note: string;
         };
         /** SectionResult */
         SectionResult: {
@@ -399,6 +959,11 @@ export interface components {
             };
             /** Note */
             note?: string | null;
+            /**
+             * Cost Usd
+             * @default 0
+             */
+            cost_usd: number;
         };
         /** SourceFile */
         SourceFile: {
@@ -425,6 +990,13 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** StagingBuildPayload */
+        StagingBuildPayload: {
+            /** Source Paths */
+            source_paths: string[];
+            /** Target Version */
+            target_version: number;
         };
         /** StrategicNote */
         StrategicNote: {
@@ -514,6 +1086,8 @@ export interface components {
              * @default
              */
             chunk_id: string;
+            /** Supporting Chunk Id */
+            supporting_chunk_id?: string | null;
             /**
              * Source Claim Ids
              * @default []
@@ -533,7 +1107,7 @@ export interface components {
             /** Verified */
             verified: boolean;
             /** Rejection Reason */
-            rejection_reason?: ("missing_chunk" | "no_citation" | "missing_source_claim" | "no_source_claims") | null;
+            rejection_reason?: ("missing_chunk" | "no_citation" | "missing_source_claim" | "no_source_claims" | "missing_bridge_pair") | null;
         };
     };
     responses: never;
@@ -560,6 +1134,216 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    live_health_live_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    ready_health_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    data_sources_health_health_data_sources_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_data_source_credentials_brands__brand_id__data_sources_credentials_get: {
+        parameters: {
+            query?: never;
+            header: {
+                "api-key": string;
+            };
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_data_source_credential_brands__brand_id__data_sources_credentials_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "api-key": string;
+            };
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DataSourceCredentialPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_market_segment_brands__brand_id__market_segments_get: {
+        parameters: {
+            query?: never;
+            header: {
+                "api-key": string;
+            };
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketSegment"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_market_segment_brands__brand_id__market_segments_put: {
+        parameters: {
+            query?: never;
+            header: {
+                "api-key": string;
+            };
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarketSegmentPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketSegment"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -927,6 +1711,103 @@ export interface operations {
             };
         };
     };
+    get_approval_history_documents__document_id__approval_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalEvent"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rerun_document_documents__document_id__rerun_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketResearchDocument"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resubmit_document_documents__document_id__resubmit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResubmitPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketResearchDocument"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     distribute_document_documents__document_id__distribute_post: {
         parameters: {
             query?: never;
@@ -980,6 +1861,304 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DistributionRecord"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_distribution_history_documents__document_id__distribution_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DistributionEvent"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_distribution_links_documents__document_id__distribution_links_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DistributionLink"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_distribution_link_documents__document_id__distribution_links_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DistributionLinkPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_distribution_link_distribution_links__link_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    client_view_client_view__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientMarketResearchView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trigger_staging_build_core_staging_build_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "api-key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StagingBuildPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_core_versions_core_versions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KBVersion"][];
+                };
+            };
+        };
+    };
+    create_promotion_request_core_staging__version__promotion_requests_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "api-key": string;
+            };
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionRequestPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_promotion_core_promotion_requests__request_id__decide_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "api-key": string;
+            };
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionDecisionPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

@@ -53,6 +53,7 @@ def run_section(brand_id: str, spec: SectionSpec, prior: dict[str, SectionResult
         claims=result.deliverable.claims,
         personas=result.personas,
         call_site_trace=result.deliverable.call_site_trace,
+        cost_usd=result.deliverable.cost_usd,
     )
 
 
@@ -84,4 +85,5 @@ def assemble_document(brand_id: str, results: dict[str, SectionResult]) -> Marke
         status=status,
         sections=results,
         call_site_trace=total_trace,
+        cost_usd=sum(r.cost_usd for r in results.values()),
     )

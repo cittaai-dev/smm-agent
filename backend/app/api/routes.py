@@ -12,6 +12,9 @@ from pydantic import BaseModel
 from starlette.requests import Request
 
 from app.api.deps import current_user, resolve_brand_scope
+from app.api.middleware.rate_limit import RateLimitMiddleware
+from app.api.routes_health import health_router
+from app.api.websocket import ws_router
 from app.domain.approval import ApprovalEvent
 from app.domain.client_view import ClientMarketResearchView, project_for_client
 from app.domain.data_source import DataSourceKind
@@ -33,6 +36,11 @@ from app.orchestration.llm import LLMNotConfiguredError
 
 app = FastAPI(title="smm-agent")
 
+# Registration order matters: Starlette wraps middleware outside-in in
+# reverse-add order, so RateLimitMiddleware (added first, thus innermost)
+# runs after CORSMiddleware -- a 429 response still carries CORS headers,
+# so the frontend can read the rejection instead of seeing a failed fetch.
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=api_settings.cors_origin_list,
@@ -41,6 +49,8 @@ app.add_middleware(
 )
 
 instrument_app(app)  # exposes /metrics (Prometheus) and OTel spans on the 3 call sites
+app.include_router(health_router)
+app.include_router(ws_router)
 
 
 @app.exception_handler(LLMNotConfiguredError)
@@ -266,6 +276,17 @@ async def run_all_research(brand_id: str) -> MarketResearchDocument:
     document = assemble_document(brand_id, results)
     _save_document(document)
     return document
+
+
+@app.post("/brands/{brand_id}/collect-now")
+async def collect_now(brand_id: str) -> dict:
+    """Manual trigger for workers/data_collection.py's collect_all_for_brand
+    (DATA_COLLECTION_QUICK_START.md §7's on-demand path) -- same task the
+    nightly beat schedule (infra/celery_app.py) would otherwise queue."""
+    from app.workers.data_collection import collect_all_for_brand
+
+    task = collect_all_for_brand.delay(brand_id)
+    return {"status": "queued", "task_id": task.id}
 
 
 @app.get("/documents/{document_id}")

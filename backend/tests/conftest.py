@@ -67,7 +67,7 @@ def fake_plan(monkeypatch):
     matter for correctness here — search_dense returns all chunks for a KB this
     small regardless of query."""
 
-    def _fake(section: str, brand_id: str) -> RetrievalPlan:
+    def _fake(section: str, brand_id: str, cost_tracker=None) -> RetrievalPlan:
         return RetrievalPlan(sub_queries=["brand overview"], k_per_query=8)
 
     monkeypatch.setattr("app.orchestration.llm.call_plan", _fake)
@@ -78,7 +78,7 @@ def fake_synthesize_grounded(monkeypatch, fake_plan):
     """Synthesize always cites a real chunk_id from the retrieved context — the
     happy path, no repair needed."""
 
-    def _fake(section: str, context):
+    def _fake(section: str, context, cost_tracker=None):
         chunk = context.chunks[0]
         return [ClaimDraft(section=section, text="Acme Roasters sells specialty coffee.", chunk_id=chunk.chunk_id)]
 
@@ -90,12 +90,12 @@ def fake_synthesize_fabricated(monkeypatch, fake_plan):
     """Synthesize cites a chunk_id that does not exist in the retrieved context —
     forces the verifier to reject and the repair path to fire."""
 
-    def _fake(section: str, context):
+    def _fake(section: str, context, cost_tracker=None):
         return [ClaimDraft(section=section, text="Acme Roasters sells specialty coffee.", chunk_id="not-a-real-chunk-id")]
 
     monkeypatch.setattr("app.orchestration.llm.call_synthesize", _fake)
 
-    def _fake_repair(claims, context):
+    def _fake_repair(claims, context, cost_tracker=None):
         chunk = context.chunks[0]
         return [ClaimDraft(section=c.section, text=c.text, chunk_id=chunk.chunk_id) for c in claims]
 
@@ -109,12 +109,12 @@ def fake_synthesize_fabricated_unrepairable(monkeypatch, fake_plan):
     that fake_synthesize_fabricated's always-succeeds repair never exercises:
     a single repair attempt, then degrade, never a second try."""
 
-    def _fake(section: str, context):
+    def _fake(section: str, context, cost_tracker=None):
         return [ClaimDraft(section=section, text="Acme Roasters sells specialty coffee.", chunk_id="not-a-real-chunk-id")]
 
     monkeypatch.setattr("app.orchestration.llm.call_synthesize", _fake)
 
-    def _fake_repair_still_fails(claims, context):
+    def _fake_repair_still_fails(claims, context, cost_tracker=None):
         return [ClaimDraft(section=c.section, text=c.text, chunk_id="still-not-a-real-chunk-id") for c in claims]
 
     monkeypatch.setattr("app.orchestration.llm.call_repair", _fake_repair_still_fails)
@@ -124,7 +124,7 @@ def fake_synthesize_fabricated_unrepairable(monkeypatch, fake_plan):
 def fake_synthesize_with_personas(monkeypatch, fake_plan):
     """target_audience's combined claims+personas call site, happy path."""
 
-    def _fake(section: str, context):
+    def _fake(section: str, context, cost_tracker=None):
         chunk = context.chunks[0]
         claims = [ClaimDraft(section=section, text="Acme Roasters targets busy professionals.", chunk_id=chunk.chunk_id)]
         personas = [
@@ -147,7 +147,7 @@ def fake_synthesize_empty(monkeypatch, fake_plan):
     honest-empty-section path (dev_guidelines.md §11), as opposed to a
     fabricated citation."""
 
-    def _fake(section: str, context):
+    def _fake(section: str, context, cost_tracker=None):
         return []
 
     monkeypatch.setattr("app.orchestration.llm.call_synthesize", _fake)
@@ -165,11 +165,11 @@ def fake_full_document_pipeline(monkeypatch, fake_plan):
     exempt, not faked, since Core genuinely doesn't exist yet)."""
     from app.domain.claim import DerivedClaimDraft
 
-    def _fake_synthesize(section: str, context):
+    def _fake_synthesize(section: str, context, cost_tracker=None):
         chunk = context.chunks[0]
         return [ClaimDraft(section=section, text=f"Grounded claim for {section}.", chunk_id=chunk.chunk_id)]
 
-    def _fake_synthesize_with_personas(section: str, context):
+    def _fake_synthesize_with_personas(section: str, context, cost_tracker=None):
         chunk = context.chunks[0]
         claims = [ClaimDraft(section=section, text=f"Grounded claim for {section}.", chunk_id=chunk.chunk_id)]
         personas = [
@@ -183,7 +183,7 @@ def fake_full_document_pipeline(monkeypatch, fake_plan):
         ]
         return claims, personas
 
-    def _fake_synthesize_from_prior(section: str, upstream, missing_sections):
+    def _fake_synthesize_from_prior(section: str, upstream, missing_sections, cost_tracker=None):
         claim = upstream[0].claims[0]
         return [
             DerivedClaimDraft(section=section, text=f"Derived claim for {section}.", source_claim_ids=[claim.claim_id])

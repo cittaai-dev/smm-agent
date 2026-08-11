@@ -108,6 +108,37 @@ class RateLimitSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SMM_RATE_LIMIT_", env_file=".env", extra="ignore")
 
 
+class ApiRateLimitSettings(BaseSettings):
+    # Step 6 Part A §2 -- per-caller (api-key or anon-bucket) request budget,
+    # Redis-backed so it holds across replicas, separate concept from
+    # RateLimitSettings above (that one throttles outbound data-source calls).
+    requests_per_window: int = 60
+    window_seconds: int = 60
+
+    model_config = SettingsConfigDict(env_prefix="SMM_API_RATE_LIMIT_", env_file=".env", extra="ignore")
+
+
+class CircuitBreakerSettings(BaseSettings):
+    failure_threshold: int = 5
+    reset_after_seconds: int = 30
+
+    model_config = SettingsConfigDict(env_prefix="SMM_CIRCUIT_BREAKER_", env_file=".env", extra="ignore")
+
+
+class CostBudgetSettings(BaseSettings):
+    max_tokens_per_run: int = 40_000
+    max_usd_per_run: float = 2.00
+    warn_at_ratio: float = 0.8
+    # Blended $/1k tokens, deliberately a single rate rather than a per-model
+    # input/output split table -- good enough to enforce a budget ceiling;
+    # exact accounting belongs to the provider's own billing dashboard, not
+    # this app (dev_guidelines.md: don't build the general case before the
+    # concrete need forces it).
+    usd_per_1k_tokens: float = 0.01
+
+    model_config = SettingsConfigDict(env_prefix="SMM_COST_", env_file=".env", extra="ignore")
+
+
 db_settings = DBSettings()
 api_settings = ApiSettings()
 llm_settings = LLMSettings()
@@ -118,3 +149,6 @@ bridge_settings = BridgeSettings()
 webtool_settings = WebToolSettings()
 credential_settings = CredentialSettings()
 rate_limit_settings = RateLimitSettings()
+api_rate_limit_settings = ApiRateLimitSettings()
+circuit_breaker_settings = CircuitBreakerSettings()
+cost_budget_settings = CostBudgetSettings()

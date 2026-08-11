@@ -1,0 +1,57 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# step6_production_operations.md §7 -- staged, gated. Migrations run as a
+# separate explicit step, never in the container entrypoint, so a pod
+# reschedule never re-triggers one; rollback is `kubectl rollout undo`
+# alone, sufficient because every migration since Step 1 is additive/
+# backward-compatible by this step's own convention (§7's closing note).
+#
+# Requires REGISTRY/KUBE_CONFIG* secrets and a real cluster this repo
+# doesn't ship -- wiring those up is an infra/ops decision outside this
+# codebase's scope, so this file documents the pipeline shape and is inert
+# (no cluster to fail against) until an operator supplies them.
+jobs:
+  deploy-staging:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t $REGISTRY/backend:${{ github.sha }} backend/
+        env:
+          REGISTRY: ${{ vars.REGISTRY }}
+      - run: docker push $REGISTRY/backend:${{ github.sha }}
+        env:
+          REGISTRY: ${{ vars.REGISTRY }}
+      - run: |
+          kubectl set image deployment/backend backend=$REGISTRY/backend:${{ github.sha }} -n staging
+          kubectl rollout status deployment/backend -n staging
+        env:
+          REGISTRY: ${{ vars.REGISTRY }}
+      - run: cd backend && pip install -e . --break-system-packages && alembic upgrade head
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+
+  deploy-production:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    # GitHub Environments' own required-reviewer setting is the actual gate
+    # here -- this file just declares the environment, the human approval
+    # click happens in repo settings, not in yaml.
+    environment:
+      name: production
+      url: https://smm-agent.example.com
+    steps:
+      - uses: actions/checkout@v4
+      - run: kubectl set image deployment/backend backend=$REGISTRY/backend:${{ github.sha }} -n production --record
+        env:
+          REGISTRY: ${{ vars.REGISTRY }}
+      - run: cd backend && pip install -e . --break-system-packages && alembic upgrade head
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}

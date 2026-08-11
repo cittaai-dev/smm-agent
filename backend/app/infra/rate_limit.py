@@ -7,7 +7,7 @@ from app.infra.settings import db_settings
 _client: redis.Redis | None = None
 
 
-def _get_client() -> redis.Redis:
+def get_client() -> redis.Redis:
     global _client
     if _client is None:
         _client = redis.Redis.from_url(db_settings.redis_url, decode_responses=True)
@@ -21,7 +21,7 @@ class DataSourceRateLimiter:
     Celery's broker -- no new operational dependency."""
 
     def __init__(self, client: redis.Redis | None = None):
-        self._client = client or _get_client()
+        self._client = client or get_client()
 
     def check(self, brand_id: str, source: str, limit_per_hour: int) -> bool:
         """Returns True if the call is allowed under the current hour's
