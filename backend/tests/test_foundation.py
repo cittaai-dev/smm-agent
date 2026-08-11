@@ -153,6 +153,44 @@ def test_run_research_without_llm_key_returns_clear_503(monkeypatch, sample_file
     assert "SMM_LLM_OPENAI_API_KEY" in response.json()["detail"]
 
 
+def test_rerun_after_insufficient_grounding_overwrites_stale_claims(
+    sample_file, monkeypatch, fake_plan
+):
+    # Reproduces a real bug: the first run (e.g. research triggered before
+    # ingest finished, or before source material existed) lands zero claims.
+    # A later, successful rerun for the same brand/section reuses the same
+    # deterministic deliverable id -- if the UPSERT only updates `status` and
+    # not `claims`/`call_site_trace`, GET /deliverables/{id} (what the review
+    # page actually reads) stays stuck showing the first run's empty claims
+    # forever, no matter how many times research is rerun.
+    from app.main import app
+    from app.domain.claim import ClaimDraft
+
+    ingest_file(brand_id="test-brand", file_path=sample_file)
+
+    def _empty(section: str, context):
+        return []
+
+    monkeypatch.setattr("app.orchestration.llm.call_synthesize", _empty)
+    client = TestClient(app)
+    first = client.post("/brands/test-brand/research/run")
+    deliverable_id = first.json()["id"]
+    assert first.json()["status"] == "insufficient_grounding"
+
+    def _grounded(section: str, context):
+        chunk = context.chunks[0]
+        return [ClaimDraft(section=section, text="Acme Roasters sells specialty coffee.", chunk_id=chunk.chunk_id)]
+
+    monkeypatch.setattr("app.orchestration.llm.call_synthesize", _grounded)
+    second = client.post("/brands/test-brand/research/run")
+    assert second.json()["status"] == "pending_approval"
+    assert second.json()["claims"]
+
+    fetched = client.get(f"/deliverables/{deliverable_id}")
+    assert fetched.json()["status"] == "pending_approval"
+    assert fetched.json()["claims"], "GET must reflect the rerun, not the stale first-run claims"
+
+
 def test_approval_gate_blocks_default(sample_file, fake_synthesize_grounded):
     ingest_file(brand_id="test-brand", file_path=sample_file)
 

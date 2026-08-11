@@ -107,7 +107,10 @@ def _save_deliverable(deliverable: Deliverable) -> None:
         session.execute(
             """INSERT INTO deliverable (id, brand_id, status, claims, call_site_trace)
                VALUES (:id, :brand_id, :status, (:claims)::jsonb, (:trace)::jsonb)
-               ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status""",
+               ON CONFLICT (id) DO UPDATE SET
+                   status = EXCLUDED.status,
+                   claims = EXCLUDED.claims,
+                   call_site_trace = EXCLUDED.call_site_trace""",
             {
                 "id": deliverable.id,
                 "brand_id": deliverable.brand_id,
