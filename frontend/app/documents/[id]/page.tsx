@@ -18,11 +18,18 @@ import { DistributionPanel } from "@/components/DistributionPanel";
 import { PersonaList } from "@/components/PersonaList";
 import { QualityCheckpointPanel } from "@/components/QualityCheckpointPanel";
 import { RejectedStateActions } from "@/components/RejectedStateActions";
+import { RunCostBadge } from "@/components/RunCostBadge";
 import { SectionOutline } from "@/components/SectionOutline";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StrategicNotesPanel } from "@/components/StrategicNotesPanel";
 import { SECTION_LABELS, SECTION_ORDER } from "@/lib/sections";
 import type { CheckpointFailedDetail } from "@/lib/types";
+
+// Mirrors backend/app/infra/settings.py's CostBudgetSettings.max_usd_per_run
+// default (SMM_COST_MAX_USD_PER_RUN) -- there's no config-exposing endpoint
+// yet, so this is a display-only approximation of the real server-enforced
+// ceiling, not a second source of truth the backend reads from.
+const RUN_COST_BUDGET_USD = 2.0;
 
 function isCheckpointFailedDetail(detail: unknown): detail is CheckpointFailedDetail {
   return (
@@ -98,7 +105,10 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     <main className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Market Research — {document.brand_id}</h1>
-        <StatusBadge status={document.status} />
+        <div className="flex items-center gap-3">
+          <RunCostBadge usd={document.cost_usd} budget={RUN_COST_BUDGET_USD} />
+          <StatusBadge status={document.status} />
+        </div>
       </div>
 
       <SectionOutline document={document} />

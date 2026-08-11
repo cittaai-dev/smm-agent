@@ -7,12 +7,27 @@ services:
     ports: ["5432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
+    # step6_production_operations.md §0 -- closes the startup race: without
+    # this, `docker compose up` could hand backend a connection before
+    # postgres finishes initdb, especially on a cold volume.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
   redis:
     image: redis:7
     ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
   backend:
     build: ../backend
-    depends_on: [postgres, redis]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
     # Picks up SMM_LLM_OPENAI_API_KEY and friends from the developer's local
     # backend/.env without baking secrets into this file. environment: below
     # still wins over env_file for the same key (DATABASE_URL/REDIS_URL must
@@ -41,7 +56,9 @@ services:
   worker-ingest:
     build: ../backend
     command: celery -A app.infra.celery_app worker -Q ingest --loglevel=info --concurrency=4
-    depends_on: [postgres, redis]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
     env_file: ../backend/.env
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:dev@postgres/smm
@@ -55,7 +72,9 @@ services:
     # 2's brand-file queue is latency-bound; this one is throughput-bound and
     # must never starve, or be starved by, a Team Lead's file upload).
     command: celery -A app.infra.celery_app worker -Q core --loglevel=info --concurrency=2
-    depends_on: [postgres, redis]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
     env_file: ../backend/.env
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:dev@postgres/smm
@@ -65,14 +84,30 @@ services:
       # `uploads` volume: these are operator-provided, not client-uploaded,
       # and never touch a run:<brand_id> KB.
       - core-sources:/app/core-sources
+  worker-data-collection:
+    build: ../backend
+    # step6_production_operations.md Part B §3 -- its own queue, separate
+    # concurrency tuning from worker-ingest: outbound calls to third-party
+    # sources are rate-limited and can run minutes long (infra/rate_limit.py's
+    # backoff), a different profile from a single brand file upload.
+    command: celery -A app.infra.celery_app worker -Q data_collection --loglevel=info --concurrency=4
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    env_file: ../backend/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:dev@postgres/smm
+      REDIS_URL: redis://redis
   beat:
     build: ../backend
-    # Drives ttl-sweep-nightly (workers/ttl_sweep.py) -- a single scheduler
-    # process, separate from every worker container, matching Celery's own
-    # "run exactly one beat" requirement. Enqueues onto the ingest queue
-    # (celery_app.py's task_routes), so worker-ingest is what actually runs it.
+    # Drives ttl-sweep-nightly (workers/ttl_sweep.py) and the daily/weekly
+    # data-collection schedule (workers/data_collection.py) -- a single
+    # scheduler process, separate from every worker container, matching
+    # Celery's own "run exactly one beat" requirement. Each task lands on
+    # whichever queue celery_app.py's task_routes assigns it to.
     command: celery -A app.infra.celery_app beat --loglevel=info
-    depends_on: [redis]
+    depends_on:
+      redis: { condition: service_healthy }
     env_file: ../backend/.env
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:dev@postgres/smm

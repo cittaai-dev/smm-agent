@@ -4,6 +4,7 @@ from pathlib import Path
 from app.infra.celery_app import celery_app
 from app.infra.db import get_session
 from app.infra.embeddings import embed, embedding_to_sql
+from app.infra.telemetry import record_ingest_batch
 from app.ingestion.parse import parse_by_type
 from app.ingestion.router import route_and_chunk
 from app.ingestion.validators import validate_batch
@@ -118,5 +119,6 @@ def ingest_file(brand_id: str, file_path: str, source_kind: str | None = None) -
             )
         session.commit()
 
+    record_ingest_batch(kb_id, sum(1 for c in chunks if c.degraded), len(chunks))
     _mark_source_file(file_id, brand_id, "ingested", None)
     return "ingested"

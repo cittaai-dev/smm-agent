@@ -4,6 +4,7 @@ import type {
   ApprovalGateRecord,
   ClientMarketResearchView,
   DataSourceCredentialSummary,
+  DataSourceHealthSummary,
   DataSourceKind,
   DistributionLink,
   DistributionLinkCreated,
@@ -306,4 +307,20 @@ export function setMarketSegment(
       body: JSON.stringify(segment),
     }),
   );
+}
+
+export function collectNow(brandId: string): Promise<{ status: string; task_id: string }> {
+  return request(`/brands/${encodeURIComponent(brandId)}/collect-now`, { method: "POST" });
+}
+
+export function fetchDataSourceHealth(): Promise<DataSourceHealthSummary> {
+  return request("/health/data-sources");
+}
+
+// ws:// for an http:// API_BASE_URL, wss:// for https:// -- kept as a
+// derivation rather than a second NEXT_PUBLIC_ var so the two origins can
+// never drift apart in an env file.
+export function liveRunSocketUrl(brandId: string, apiKey: string): string {
+  const wsBase = API_BASE_URL.replace(/^http/, "ws");
+  return `${wsBase}/ws/live-run/${encodeURIComponent(brandId)}/status?api_key=${encodeURIComponent(apiKey)}`;
 }

@@ -10,5 +10,9 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
+    // tests/e2e/**  is Playwright's suite (npm run test:e2e), not vitest's --
+    // it uses its own test()/expect() from @playwright/test, which conflicts
+    // with vitest's globals if collected here.
+    exclude: ["node_modules/**", "tests/e2e/**"],
   },
 });

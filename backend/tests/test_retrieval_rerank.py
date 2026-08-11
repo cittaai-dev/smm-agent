@@ -1,3 +1,5 @@
+import pytest
+
 from app.domain.chunk import Chunk
 from app.infra.db import get_session
 from app.infra.settings import rerank_settings
@@ -94,3 +96,22 @@ def test_rerank_cache_row_actually_persisted(monkeypatch):
             {"qh": rerank_module.query_hash("persisted query")},
         ).mappings().first()
     assert row["score"] == 0.42
+
+
+@pytest.mark.slow
+def test_rerank_with_real_model(monkeypatch):
+    """Step 4's eval-gate section scheduled this for Step 6's nightly job
+    (step6_production_operations.md §0/§6) -- every other test here
+    monkeypatches _model_predict, which proves the ordering/caching logic but
+    never actually exercises BAAI/bge-reranker-base itself. This is the one
+    place that does: no mock, a real ~1GB first-run download, real inference."""
+    monkeypatch.setattr(rerank_settings, "enabled", True)
+    rerank_module._in_process_cache.clear()
+    chunks = [
+        _chunk("off-topic", "Bananas are a good source of potassium."),
+        _chunk("on-topic", "Specialty coffee beans are sourced from single-origin farms."),
+    ]
+
+    result = rerank_module.rerank(chunks, "Where does specialty coffee come from?")
+
+    assert [c.chunk_id for c in result] == ["on-topic", "off-topic"]

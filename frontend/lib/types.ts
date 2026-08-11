@@ -152,3 +152,26 @@ export interface MarketSegment {
   website_urls: string[];
   max_competitors_to_track: number;
 }
+
+// Step 6 -- operational visibility. Hand-declared, not generated: these
+// endpoints (api/routes_health.py) return plain dicts rather than a
+// response_model, so there's no OpenAPI schema for openapi-typescript to pick
+// up. Field names match the FastAPI JSON exactly.
+export type DataSourceStatus = "ok" | "stale" | "never_run";
+
+export interface DataSourceHealth {
+  last_run: string | null;
+  staleness_hours: number | null;
+  status: DataSourceStatus;
+  error_rate_24h: number;
+  items_collected_24h: number;
+}
+
+export type DataSourceHealthSummary = Record<string, DataSourceHealth>;
+
+export interface LiveRunStatusMessage {
+  timestamp: string;
+  message: string;
+  phase: string;
+  item_count: number;
+}

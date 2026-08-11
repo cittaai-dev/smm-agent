@@ -17,3 +17,6 @@ class MarketResearchDocument(BaseModel):
     status: DocumentStatus
     sections: dict[SectionId, SectionResult]
     call_site_trace: dict[str, int]
+    # Sum of SectionResult.cost_usd -- see Deliverable.cost_usd's caveat,
+    # same partial-coverage honesty applies here.
+    cost_usd: float = 0.0

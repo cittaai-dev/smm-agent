@@ -1,14 +1,18 @@
 from langgraph.graph import END, StateGraph
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.audience_persona import AudiencePersonaDraft, VerifiedAudiencePersona
 from app.domain.claim import ClaimDraft, VerifiedClaim
+from app.domain.cost import CostBudget, CostBudgetExceeded, RunCostTracker
 from app.domain.deliverable import Deliverable
 from app.domain.retrieval import RetrievalPlan, RetrievedContext
 from app.domain.sop1 import SectionId
+from app.infra.circuit_breaker import CircuitOpenError
 
 
 class RunState(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     brand_id: str
     kb_id: str
     section: SectionId
@@ -22,16 +26,30 @@ class RunState(BaseModel):
     personas: list[VerifiedAudiencePersona] = []
     repair_attempted: bool = False
     deliverable: Deliverable | None = None
+    cost_tracker: RunCostTracker = Field(default_factory=RunCostTracker)
+    # Set by plan/synthesize/repair nodes on a cost overrun or provider outage --
+    # every subsequent node short-circuits so the run reaches insufficient_grounding
+    # through the same route_after_verify branch an evidence gap uses (P5: one
+    # failure vocabulary, distinguished only by Deliverable.reason).
+    degrade_reason: str | None = None
 
 
 def plan_node(state: RunState) -> RunState:
     from app.orchestration.llm import call_plan
 
-    state.plan = call_plan(section=state.section, brand_id=state.brand_id)
+    try:
+        state.plan = call_plan(section=state.section, brand_id=state.brand_id, cost_tracker=state.cost_tracker)
+    except CostBudgetExceeded:
+        state.degrade_reason = "cost_budget_exceeded"
+    except CircuitOpenError:
+        state.degrade_reason = "llm_provider_unavailable"
     return state
 
 
 def retrieve_node(state: RunState) -> RunState:
+    if state.degrade_reason:
+        return state
+
     from app.retrieval.hybrid import search_hybrid
 
     chunks = search_hybrid(kb_id=state.kb_id, plan=state.plan)
@@ -40,22 +58,35 @@ def retrieve_node(state: RunState) -> RunState:
 
 
 def synthesize_node(state: RunState) -> RunState:
+    if state.degrade_reason:
+        return state
+
     from app.domain.sop1 import SECTIONS_BY_ID
 
-    if SECTIONS_BY_ID[state.section].extracts_audience_personas:
-        from app.orchestration.llm import call_synthesize_with_personas
+    try:
+        if SECTIONS_BY_ID[state.section].extracts_audience_personas:
+            from app.orchestration.llm import call_synthesize_with_personas
 
-        state.claims, state.persona_drafts = call_synthesize_with_personas(
-            section=state.section, context=state.context
-        )
-    else:
-        from app.orchestration.llm import call_synthesize
+            state.claims, state.persona_drafts = call_synthesize_with_personas(
+                section=state.section, context=state.context, cost_tracker=state.cost_tracker
+            )
+        else:
+            from app.orchestration.llm import call_synthesize
 
-        state.claims = call_synthesize(section=state.section, context=state.context)
+            state.claims = call_synthesize(
+                section=state.section, context=state.context, cost_tracker=state.cost_tracker
+            )
+    except CostBudgetExceeded:
+        state.degrade_reason = "cost_budget_exceeded"
+    except CircuitOpenError:
+        state.degrade_reason = "llm_provider_unavailable"
     return state
 
 
 def verify_node(state: RunState) -> RunState:
+    if state.degrade_reason:
+        return state
+
     from app.domain.verify import verify_audience_personas, verify_claims
 
     state.verified = verify_claims(state.claims, state.context)
@@ -67,7 +98,12 @@ def verify_node(state: RunState) -> RunState:
 def repair_node(state: RunState) -> RunState:
     from app.orchestration.llm import call_repair
 
-    state.claims = call_repair(state.claims, state.context)
+    try:
+        state.claims = call_repair(state.claims, state.context, cost_tracker=state.cost_tracker)
+    except CostBudgetExceeded:
+        state.degrade_reason = "cost_budget_exceeded"
+    except CircuitOpenError:
+        state.degrade_reason = "llm_provider_unavailable"
     state.repair_attempted = True
     return state
 
@@ -102,6 +138,7 @@ def deliver_node(state: RunState) -> RunState:
         status="pending_approval",
         claims=state.verified,
         call_site_trace=_call_site_trace(state),
+        cost_usd=state.cost_tracker.usd_spent,
     )
     return state
 
@@ -113,6 +150,8 @@ def insufficient_node(state: RunState) -> RunState:
         status="insufficient_grounding",
         claims=state.verified,
         call_site_trace=_call_site_trace(state),
+        reason=state.degrade_reason,
+        cost_usd=state.cost_tracker.usd_spent,
     )
     return state
 
@@ -145,9 +184,23 @@ def build_graph():
 app_graph = build_graph()
 
 
-def run_pipeline(brand_id: str, section: SectionId = "brand_overview") -> RunState:
+def run_pipeline(
+    brand_id: str, section: SectionId = "brand_overview", budget: CostBudget | None = None
+) -> RunState:
+    import time
+
+    from app.infra.telemetry import record_run
     from app.orchestration.tracing import reset_call_counts
 
     reset_call_counts()  # call site ① is the entry point of a run
-    result = app_graph.invoke(RunState(brand_id=brand_id, kb_id=f"run:{brand_id}", section=section))
-    return RunState(**result)
+    initial = RunState(
+        brand_id=brand_id,
+        kb_id=f"run:{brand_id}",
+        section=section,
+        cost_tracker=RunCostTracker(budget),
+    )
+    started = time.monotonic()
+    result = app_graph.invoke(initial)
+    state = RunState(**result)
+    record_run(duration_s=time.monotonic() - started, usd_spent=state.cost_tracker.usd_spent)
+    return state

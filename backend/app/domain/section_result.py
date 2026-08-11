@@ -18,3 +18,5 @@ class SectionResult(BaseModel):
     # e.g. "Market Intel Core not yet available (Step 4)" vs. a real empty-evidence
     # run. Optional because "verified" sections don't need one.
     note: str | None = None
+    # See Deliverable.cost_usd -- union mode only for now, 0.0 elsewhere.
+    cost_usd: float = 0.0

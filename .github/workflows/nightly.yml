@@ -1,0 +1,46 @@
+name: Nightly
+
+on:
+  schedule: [{ cron: "0 3 * * *" }]
+  workflow_dispatch: {}
+
+jobs:
+  integration-slow:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: { POSTGRES_PASSWORD: test }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:test@localhost:5432/smm_test
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:test@localhost:5432/smm_test
+      REDIS_URL: redis://localhost:6379
+      SMM_LLM_OPENAI_API_KEY: ${{ secrets.SMM_LLM_OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      # step6_production_operations.md §0 -- the reranker's first real
+      # end-to-end run (test_rerank_with_real_model, Step 4's eval-gate
+      # section) belongs here: a ~1GB BAAI/bge-reranker-base download is too
+      # slow for every push, but it must run automatically *somewhere*.
+      # sentence-transformers is already a base dependency (app/retrieval/
+      # rerank.py's real, always-installed code path) -- no separate extra.
+      - run: pip install -e "backend[dev]" --break-system-packages
+      - run: PGPASSWORD=test createdb -h localhost -U postgres smm_test
+      - run: cd backend && DATABASE_URL=$DATABASE_URL alembic upgrade head
+      - run: cd backend && pytest tests/ -m "slow" -v
