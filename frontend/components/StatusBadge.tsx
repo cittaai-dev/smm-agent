@@ -1,6 +1,6 @@
-import type { DeliverableStatus } from "@/lib/types";
+import type { DocumentStatus } from "@/lib/types";
 
-const STYLES: Record<DeliverableStatus, string> = {
+const STYLES: Record<DocumentStatus, string> = {
   draft: "bg-slate-100 text-slate-700",
   pending_approval: "bg-amber-100 text-amber-800",
   approved: "bg-green-100 text-green-800",
@@ -8,7 +8,7 @@ const STYLES: Record<DeliverableStatus, string> = {
   insufficient_grounding: "bg-orange-100 text-orange-800",
 };
 
-const LABELS: Record<DeliverableStatus, string> = {
+const LABELS: Record<DocumentStatus, string> = {
   draft: "Draft",
   pending_approval: "Pending approval",
   approved: "Approved",
@@ -16,7 +16,7 @@ const LABELS: Record<DeliverableStatus, string> = {
   insufficient_grounding: "Insufficient grounding",
 };
 
-export function StatusBadge({ status }: { status: DeliverableStatus }) {
+export function StatusBadge({ status }: { status: DocumentStatus }) {
   return (
     <span className={`rounded-full px-3 py-1 text-sm font-medium ${STYLES[status]}`}>
       {LABELS[status]}

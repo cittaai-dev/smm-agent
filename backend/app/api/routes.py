@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi import FastAPI, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -11,6 +11,7 @@ from starlette.requests import Request
 from app.domain.deliverable import Deliverable
 from app.domain.market_research_document import MarketResearchDocument
 from app.domain.sop1 import SECTIONS_BY_ID
+from app.domain.source_file import SourceFile
 from app.infra.db import get_session
 from app.infra.settings import api_settings
 from app.orchestration.llm import LLMNotConfiguredError
@@ -47,6 +48,16 @@ class TeamInputPayload(BaseModel):
     author: str | None = None
 
 
+@app.get("/brands/{brand_id}/sections/{section_id}/team-input")
+async def get_team_input(brand_id: str, section_id: str) -> dict | None:
+    with get_session() as session:
+        row = session.execute(
+            "SELECT text, author FROM team_input WHERE brand_id = :b AND section = :s",
+            {"b": brand_id, "s": section_id},
+        ).mappings().first()
+    return dict(row) if row else None
+
+
 @app.put("/brands/{brand_id}/sections/{section_id}/team-input")
 async def set_team_input(brand_id: str, section_id: str, payload: TeamInputPayload) -> dict:
     spec = SECTIONS_BY_ID.get(section_id)
@@ -71,15 +82,26 @@ async def set_team_input(brand_id: str, section_id: str, payload: TeamInputPaylo
 
 
 @app.post("/brands/{brand_id}/sources")
-async def upload_source(brand_id: str, file: UploadFile):
+async def upload_source(brand_id: str, file: UploadFile, source_kind: str | None = Form(None)):
     _UPLOAD_DIR.mkdir(exist_ok=True)
     dest = _UPLOAD_DIR / f"{uuid4().hex}-{file.filename}"
     dest.write_bytes(await file.read())
 
     from app.workers.ingest import ingest_file
 
-    ingest_file.delay(brand_id, str(dest))
+    ingest_file.delay(brand_id, str(dest), source_kind)
     return {"status": "queued"}
+
+
+@app.get("/brands/{brand_id}/sources")
+async def list_sources(brand_id: str) -> list[SourceFile]:
+    with get_session() as session:
+        rows = session.execute(
+            "SELECT file_id, brand_id, filename, source_kind, status, degraded_reason, created_at "
+            "FROM source_file WHERE brand_id = :b ORDER BY created_at",
+            {"b": brand_id},
+        ).mappings().all()
+    return [SourceFile(**row) for row in rows]
 
 
 @app.post("/brands/{brand_id}/research/run")

@@ -1,15 +1,15 @@
-import type { Deliverable } from "@/lib/types";
+import type { DocumentStatus } from "@/lib/types";
 
 export function ApproveButton({
-  deliverable,
+  status,
   onApprove,
   pending,
 }: {
-  deliverable: Deliverable;
+  status: DocumentStatus;
   onApprove: () => void;
   pending?: boolean;
 }) {
-  const enabled = deliverable.status === "pending_approval" && !pending;
+  const enabled = status === "pending_approval" && !pending;
   return (
     <button
       type="button"
