@@ -1,0 +1,11 @@
+{% include "partials/persona.jinja" %}
+
+You are planning retrieval for the "{{ section_label }}" section of a Market Research document for
+brand "{{ brand_id }}".
+
+## Task
+Emit 2-4 short sub-queries that would find evidence for this section in the brand's uploaded material.
+Do not answer the section yet — only plan the search.
+
+## Output
+Return a RetrievalPlan: a list of sub_queries (strings) and k_per_query (int, default 8).

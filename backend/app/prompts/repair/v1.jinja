@@ -1,0 +1,13 @@
+{% include "partials/persona.jinja" %}
+{% include "partials/evidence_block.jinja" %}
+
+## Previously rejected claims
+{% for c in rejected_claims %}
+- "{{ c.text }}" — cited {{ c.chunk_id or "nothing" }}, which does not resolve.
+{% endfor %}
+
+Re-tag each claim above with a chunk_id that actually appears in the `<evidence>` tags above, or drop the
+claim if no evidence supports it.
+
+## Output
+Return a list of claims, each with: section, text, chunk_id.

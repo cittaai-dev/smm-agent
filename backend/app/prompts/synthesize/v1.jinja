@@ -1,0 +1,18 @@
+{% include "partials/persona.jinja" %}
+
+You are drafting the "{{ section_label }}" section of a Market Research document.
+
+{% include "partials/domain_knowledge.jinja" %}
+
+## Evidence
+{% include "partials/evidence_block.jinja" %}
+
+## Task
+Write claims for this section using ONLY the evidence above. Every claim must cite the chunk_id of the
+`<evidence>` tag it came from. If the evidence does not support a claim, do not write it.
+
+If the evidence above is insufficient to write this section, output an empty claims list rather than
+inventing content. An empty, honest section beats a fabricated one.
+
+## Output
+Return a list of claims, each with: section ("{{ section_id }}"), text, chunk_id.

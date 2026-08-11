@@ -1,0 +1,6 @@
+{% if domain_facts %}
+## Domain rules
+{% for fact in domain_facts %}
+- {{ fact.text }}
+{% endfor %}
+{% endif %}

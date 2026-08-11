@@ -1,0 +1,67 @@
+from fastapi.testclient import TestClient
+
+from app.infra.db import get_session
+from app.orchestration.graph import run_pipeline
+from app.workers.ingest import ingest_file
+
+
+def _chunk_count(brand_id: str) -> int:
+    with get_session() as session:
+        row = session.execute(
+            "SELECT count(*) AS n FROM chunk WHERE kb_id = :kb", {"kb": f"run:{brand_id}"}
+        ).mappings().first()
+    return row["n"]
+
+
+def test_citation_resolves(sample_file, fake_synthesize_grounded):
+    ingest_file(brand_id="test-brand", file_path=sample_file)
+
+    result = run_pipeline(brand_id="test-brand")
+
+    assert result.deliverable.status == "pending_approval"
+    assert result.deliverable.claims
+    for claim in result.deliverable.claims:
+        assert claim.verified
+        with get_session() as session:
+            row = session.execute(
+                "SELECT lower(block_span) AS lo, upper(block_span) - 1 AS hi FROM chunk WHERE chunk_id = :cid",
+                {"cid": claim.chunk_id},
+            ).mappings().first()
+        assert row is not None
+        assert (row["lo"], row["hi"]) == claim.block_span
+
+
+def test_fabricated_citation_rejected(sample_file, fake_synthesize_fabricated):
+    ingest_file(brand_id="test-brand", file_path=sample_file)
+
+    result = run_pipeline(brand_id="test-brand")
+
+    # repair fired exactly once and fixed the citation -> nothing left rejected
+    assert result.deliverable.call_site_trace["repair"] == 1
+    assert all(c.verified for c in result.deliverable.claims)
+    assert result.deliverable.status == "pending_approval"
+
+
+def test_idempotent_reupload(sample_file):
+    ingest_file(brand_id="test-brand", file_path=sample_file)
+    count_1 = _chunk_count("test-brand")
+
+    ingest_file(brand_id="test-brand", file_path=sample_file)
+    count_2 = _chunk_count("test-brand")
+
+    assert count_1 == count_2
+    assert count_1 > 0
+
+
+def test_approval_gate_blocks_default(sample_file, fake_synthesize_grounded):
+    ingest_file(brand_id="test-brand", file_path=sample_file)
+
+    from app.main import app
+
+    client = TestClient(app)
+    response = client.post("/brands/test-brand/research/run")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "pending_approval"
+    assert body["status"] != "approved"

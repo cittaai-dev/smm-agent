@@ -1,0 +1,81 @@
+from pydantic import BaseModel
+
+from app.domain.claim import ClaimDraft
+from app.domain.retrieval import RetrievalPlan, RetrievedContext
+from app.domain_knowledge.store import facts_for
+from app.infra.settings import llm_settings
+from app.orchestration.tracing import traced_llm_call
+from app.prompts.render import (
+    PlanContext,
+    RepairContext,
+    SynthesizeContext,
+    render_plan,
+    render_repair,
+    render_synthesize,
+)
+
+SECTION_LABELS = {"brand_overview": "Brand overview"}
+
+
+class _PlanOutput(BaseModel):
+    sub_queries: list[str]
+    k_per_query: int = 8
+
+
+class _SynthesisOutput(BaseModel):
+    claims: list[ClaimDraft]
+
+
+def _client():
+    from openai import OpenAI
+
+    return OpenAI(api_key=llm_settings.openai_api_key)
+
+
+@traced_llm_call("plan")
+def call_plan(section: str, brand_id: str) -> RetrievalPlan:
+    prompt = render_plan(
+        PlanContext(brand_id=brand_id, section_id=section, section_label=SECTION_LABELS[section])
+    )
+    parsed = _client().beta.chat.completions.parse(
+        model=llm_settings.plan_model,
+        messages=[{"role": "system", "content": prompt}],
+        response_format=_PlanOutput,
+    ).choices[0].message.parsed
+    return RetrievalPlan(sub_queries=parsed.sub_queries, k_per_query=parsed.k_per_query)
+
+
+@traced_llm_call("synthesize")
+def call_synthesize(section: str, context: RetrievedContext) -> list[ClaimDraft]:
+    ctx = SynthesizeContext(
+        section_id=section,
+        section_label=SECTION_LABELS[section],
+        chunks=context.chunks,
+        domain_facts=facts_for(section),
+    )
+    prompt = render_synthesize(ctx)
+    parsed = _client().beta.chat.completions.parse(
+        model=llm_settings.synthesize_model,
+        temperature=llm_settings.synthesize_temperature,
+        messages=[{"role": "system", "content": prompt}],
+        response_format=_SynthesisOutput,
+    ).choices[0].message.parsed
+    return parsed.claims
+
+
+@traced_llm_call("repair")
+def call_repair(claims: list[ClaimDraft], context: RetrievedContext) -> list[ClaimDraft]:
+    known_ids = {c.chunk_id for c in context.chunks}
+    rejected = [c for c in claims if c.chunk_id is None or c.chunk_id not in known_ids]
+    if not rejected:
+        return claims
+
+    prompt = render_repair(RepairContext(chunks=context.chunks, rejected_claims=rejected))
+    parsed = _client().beta.chat.completions.parse(
+        model=llm_settings.repair_model,
+        messages=[{"role": "system", "content": prompt}],
+        response_format=_SynthesisOutput,
+    ).choices[0].message.parsed
+
+    fixed_by_text = {c.text: c for c in parsed.claims}
+    return [fixed_by_text.get(c.text, c) for c in claims]
