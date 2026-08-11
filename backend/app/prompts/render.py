@@ -4,7 +4,7 @@ from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel
 
 from app.domain.chunk import Chunk
-from app.domain.claim import ClaimDraft
+from app.domain.claim import ClaimDraft, VerifiedClaim
 from app.domain_knowledge.store import DomainFact
 
 _PROMPTS_DIR = Path(__file__).parent
@@ -29,6 +29,19 @@ class RepairContext(BaseModel):
     rejected_claims: list[ClaimDraft]
 
 
+class UpstreamSectionClaims(BaseModel):
+    section_label: str
+    claims: list[VerifiedClaim]
+
+
+class SynthesizeFromPriorContext(BaseModel):
+    section_id: str
+    section_label: str
+    upstream: list[UpstreamSectionClaims]
+    missing_sections: list[str] = []
+    domain_facts: list[DomainFact] = []
+
+
 def render_plan(ctx: PlanContext, version: str = "v1") -> str:
     return _env.get_template(f"plan/{version}.jinja").render(**ctx.model_dump())
 
@@ -39,3 +52,7 @@ def render_synthesize(ctx: SynthesizeContext, version: str = "v1") -> str:
 
 def render_repair(ctx: RepairContext, version: str = "v1") -> str:
     return _env.get_template(f"repair/{version}.jinja").render(**ctx.model_dump())
+
+
+def render_synthesize_from_prior(ctx: SynthesizeFromPriorContext, version: str = "v1") -> str:
+    return _env.get_template(f"synthesize_from_prior/{version}.jinja").render(**ctx.model_dump())

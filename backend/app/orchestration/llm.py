@@ -1,7 +1,8 @@
 from pydantic import BaseModel
 
-from app.domain.claim import ClaimDraft
+from app.domain.claim import ClaimDraft, DerivedClaimDraft
 from app.domain.retrieval import RetrievalPlan, RetrievedContext
+from app.domain.sop1 import SECTION_LABELS
 from app.domain_knowledge.store import facts_for
 from app.infra.settings import llm_settings
 from app.orchestration.tracing import traced_llm_call
@@ -9,12 +10,13 @@ from app.prompts.render import (
     PlanContext,
     RepairContext,
     SynthesizeContext,
+    SynthesizeFromPriorContext,
+    UpstreamSectionClaims,
     render_plan,
     render_repair,
     render_synthesize,
+    render_synthesize_from_prior,
 )
-
-SECTION_LABELS = {"brand_overview": "Brand overview"}
 
 
 class LLMNotConfiguredError(RuntimeError):
@@ -30,6 +32,10 @@ class _PlanOutput(BaseModel):
 
 class _SynthesisOutput(BaseModel):
     claims: list[ClaimDraft]
+
+
+class _DerivedSynthesisOutput(BaseModel):
+    claims: list[DerivedClaimDraft]
 
 
 def _client():
@@ -70,6 +76,30 @@ def call_synthesize(section: str, context: RetrievedContext) -> list[ClaimDraft]
         temperature=llm_settings.synthesize_temperature,
         messages=[{"role": "system", "content": prompt}],
         response_format=_SynthesisOutput,
+    ).choices[0].message.parsed
+    return parsed.claims
+
+
+@traced_llm_call("synthesize")
+def call_synthesize_from_prior(
+    section: str, upstream: list[UpstreamSectionClaims], missing_sections: list[str]
+) -> list[DerivedClaimDraft]:
+    """Same call site as call_synthesize (P2 counts it once, not twice) -- just a
+    different template/input shape, for synthesis_only sections that derive from
+    upstream verified claims instead of raw evidence chunks."""
+    ctx = SynthesizeFromPriorContext(
+        section_id=section,
+        section_label=SECTION_LABELS[section],
+        upstream=upstream,
+        missing_sections=missing_sections,
+        domain_facts=facts_for(section),
+    )
+    prompt = render_synthesize_from_prior(ctx)
+    parsed = _client().beta.chat.completions.parse(
+        model=llm_settings.synthesize_model,
+        temperature=llm_settings.synthesize_temperature,
+        messages=[{"role": "system", "content": prompt}],
+        response_format=_DerivedSynthesisOutput,
     ).choices[0].message.parsed
     return parsed.claims
 

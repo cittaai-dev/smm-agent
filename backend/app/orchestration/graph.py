@@ -4,14 +4,13 @@ from pydantic import BaseModel
 from app.domain.claim import ClaimDraft, VerifiedClaim
 from app.domain.deliverable import Deliverable
 from app.domain.retrieval import RetrievalPlan, RetrievedContext
-from app.orchestration.tracing import reset_call_counts
-
-SECTION = "brand_overview"
+from app.domain.sop1 import SectionId
 
 
 class RunState(BaseModel):
     brand_id: str
     kb_id: str
+    section: SectionId
     plan: RetrievalPlan | None = None
     context: RetrievedContext | None = None
     claims: list[ClaimDraft] = []
@@ -21,10 +20,9 @@ class RunState(BaseModel):
 
 
 def plan_node(state: RunState) -> RunState:
-    reset_call_counts()  # call site ① is the entry point of a run
     from app.orchestration.llm import call_plan
 
-    state.plan = call_plan(section=SECTION, brand_id=state.brand_id)
+    state.plan = call_plan(section=state.section, brand_id=state.brand_id)
     return state
 
 
@@ -39,7 +37,7 @@ def retrieve_node(state: RunState) -> RunState:
 def synthesize_node(state: RunState) -> RunState:
     from app.orchestration.llm import call_synthesize
 
-    state.claims = call_synthesize(section=SECTION, context=state.context)
+    state.claims = call_synthesize(section=state.section, context=state.context)
     return state
 
 
@@ -83,7 +81,7 @@ def _call_site_trace(state: RunState) -> dict[str, int]:
 
 def deliver_node(state: RunState) -> RunState:
     state.deliverable = Deliverable(
-        id=f"del-{state.brand_id}-{SECTION}",
+        id=f"del-{state.brand_id}-{state.section}",
         brand_id=state.brand_id,
         status="pending_approval",
         claims=state.verified,
@@ -94,7 +92,7 @@ def deliver_node(state: RunState) -> RunState:
 
 def insufficient_node(state: RunState) -> RunState:
     state.deliverable = Deliverable(
-        id=f"del-{state.brand_id}-{SECTION}",
+        id=f"del-{state.brand_id}-{state.section}",
         brand_id=state.brand_id,
         status="insufficient_grounding",
         claims=state.verified,
@@ -131,6 +129,9 @@ def build_graph():
 app_graph = build_graph()
 
 
-def run_pipeline(brand_id: str) -> RunState:
-    result = app_graph.invoke(RunState(brand_id=brand_id, kb_id=f"run:{brand_id}"))
+def run_pipeline(brand_id: str, section: SectionId = "brand_overview") -> RunState:
+    from app.orchestration.tracing import reset_call_counts
+
+    reset_call_counts()  # call site ① is the entry point of a run
+    result = app_graph.invoke(RunState(brand_id=brand_id, kb_id=f"run:{brand_id}", section=section))
     return RunState(**result)

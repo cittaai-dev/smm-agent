@@ -4,13 +4,29 @@ import pytest
 
 from app.domain.claim import ClaimDraft
 from app.domain.retrieval import RetrievalPlan
+from app.infra.settings import db_settings
+
+# Must happen before any test imports app.infra.db / calls get_session() --
+# get_engine() lazily creates a module-global engine from db_settings.database_url
+# on first use, so this override has to land before that first call. Without it,
+# the autouse TRUNCATE below would hit the same database the dev server/worker
+# use (this happened once already: running pytest wiped real ingested brand
+# data). Create the DB once and point migrations at it:
+#   docker exec infra-postgres-1 createdb -U postgres smm_test
+#   TEST_DATABASE_URL=$TEST_DATABASE_URL DATABASE_URL=$TEST_DATABASE_URL \
+#     .venv/bin/alembic upgrade head   # or just re-run alembic with DATABASE_URL=the test url
+db_settings.database_url = db_settings.test_database_url
+
 from app.infra.db import get_session
 
 
 @pytest.fixture(autouse=True)
 def clean_db():
     with get_session() as session:
-        session.execute("TRUNCATE deliverable, chunk, document_registry CASCADE")
+        session.execute(
+            "TRUNCATE deliverable, chunk, document_registry, source_file, "
+            "team_input, market_research_document CASCADE"
+        )
         session.commit()
     yield
 
@@ -78,3 +94,25 @@ def fake_synthesize_empty(monkeypatch, fake_plan):
         return []
 
     monkeypatch.setattr("app.orchestration.llm.call_synthesize", _fake)
+
+
+@pytest.fixture
+def fake_full_document_pipeline(monkeypatch, fake_plan):
+    """Covers every LLM call site run_all_sections can reach for union and
+    synthesis_only sections, so a full 11-section document can be exercised
+    without a real network call. Core-gated and direct_input sections aren't
+    mocked here -- they never reach an LLM call site at all in Step 2."""
+    from app.domain.claim import DerivedClaimDraft
+
+    def _fake_synthesize(section: str, context):
+        chunk = context.chunks[0]
+        return [ClaimDraft(section=section, text=f"Grounded claim for {section}.", chunk_id=chunk.chunk_id)]
+
+    def _fake_synthesize_from_prior(section: str, upstream, missing_sections):
+        claim = upstream[0].claims[0]
+        return [
+            DerivedClaimDraft(section=section, text=f"Derived claim for {section}.", source_claim_ids=[claim.claim_id])
+        ]
+
+    monkeypatch.setattr("app.orchestration.llm.call_synthesize", _fake_synthesize)
+    monkeypatch.setattr("app.orchestration.llm.call_synthesize_from_prior", _fake_synthesize_from_prior)
