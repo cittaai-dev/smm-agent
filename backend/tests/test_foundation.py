@@ -67,6 +67,20 @@ def test_cors_allows_configured_frontend_origin():
     assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
 
 
+def test_run_research_without_llm_key_returns_clear_503(monkeypatch, sample_file):
+    from app.infra.settings import llm_settings
+    from app.main import app
+
+    monkeypatch.setattr(llm_settings, "openai_api_key", "")
+    ingest_file(brand_id="test-brand", file_path=sample_file)
+
+    client = TestClient(app)
+    response = client.post("/brands/test-brand/research/run")
+
+    assert response.status_code == 503
+    assert "SMM_LLM_OPENAI_API_KEY" in response.json()["detail"]
+
+
 def test_approval_gate_blocks_default(sample_file, fake_synthesize_grounded):
     ingest_file(brand_id="test-brand", file_path=sample_file)
 

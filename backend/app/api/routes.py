@@ -4,11 +4,14 @@ from uuid import uuid4
 
 from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from starlette.requests import Request
 
 from app.domain.deliverable import Deliverable
 from app.infra.db import get_session
 from app.infra.settings import api_settings
+from app.orchestration.llm import LLMNotConfiguredError
 
 app = FastAPI(title="smm-agent")
 
@@ -18,6 +21,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(LLMNotConfiguredError)
+async def llm_not_configured_handler(request: Request, exc: LLMNotConfiguredError) -> JSONResponse:
+    # 503, not 500: this is a missing-config problem the operator can fix,
+    # not a bug in the request -- and CORSMiddleware still adds the
+    # Access-Control-Allow-Origin header to error responses, so the frontend
+    # can read the message instead of just seeing a failed fetch.
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 _UPLOAD_DIR = Path("uploads")
 

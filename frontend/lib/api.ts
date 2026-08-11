@@ -15,7 +15,16 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, init);
   if (!res.ok) {
-    throw new ApiError(res.status, `${init?.method ?? "GET"} ${path} failed: ${res.status}`);
+    // FastAPI error responses are {"detail": "..."} -- surface that instead
+    // of just the status code, so e.g. "LLM not configured" reaches the UI
+    // instead of a bare "failed: 503".
+    const detail = await res
+      .clone()
+      .json()
+      .then((body) => (typeof body?.detail === "string" ? body.detail : null))
+      .catch(() => null);
+    const message = detail ?? `${init?.method ?? "GET"} ${path} failed: ${res.status}`;
+    throw new ApiError(res.status, message);
   }
   return (await res.json()) as T;
 }
