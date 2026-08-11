@@ -2,9 +2,10 @@ from pathlib import Path
 
 import pytest
 
+from app.domain.audience_persona import AudiencePersonaDraft
 from app.domain.claim import ClaimDraft
 from app.domain.retrieval import RetrievalPlan
-from app.infra.settings import db_settings
+from app.infra.settings import db_settings, rerank_settings
 
 # Must happen before any test imports app.infra.db / calls get_session() --
 # get_engine() lazily creates a module-global engine from db_settings.database_url
@@ -21,11 +22,24 @@ from app.infra.db import get_session
 
 
 @pytest.fixture(autouse=True)
+def disable_rerank_by_default():
+    # Same reasoning as embeddings' offline fallback (infra/embeddings.py) --
+    # the cross-encoder is a genuinely heavy, possibly-not-yet-downloaded
+    # dependency, and the general test suite must stay runnable without it.
+    # Tests of rerank.py itself explicitly re-enable this in their own scope.
+    original = rerank_settings.enabled
+    rerank_settings.enabled = False
+    yield
+    rerank_settings.enabled = original
+
+
+@pytest.fixture(autouse=True)
 def clean_db():
     with get_session() as session:
         session.execute(
             "TRUNCATE deliverable, chunk, document_registry, source_file, "
-            "team_input, market_research_document CASCADE"
+            "team_input, market_research_document, strategic_note, "
+            "approval_gate, distribution_record, rerank_cache CASCADE"
         )
         session.commit()
     yield
@@ -85,6 +99,45 @@ def fake_synthesize_fabricated(monkeypatch, fake_plan):
 
 
 @pytest.fixture
+def fake_synthesize_fabricated_unrepairable(monkeypatch, fake_plan):
+    """Synthesize fabricates a citation, and Repair's own attempt *also* fails
+    to produce a resolvable chunk_id -- proves the bounded-retry half of P2/P5
+    that fake_synthesize_fabricated's always-succeeds repair never exercises:
+    a single repair attempt, then degrade, never a second try."""
+
+    def _fake(section: str, context):
+        return [ClaimDraft(section=section, text="Acme Roasters sells specialty coffee.", chunk_id="not-a-real-chunk-id")]
+
+    monkeypatch.setattr("app.orchestration.llm.call_synthesize", _fake)
+
+    def _fake_repair_still_fails(claims, context):
+        return [ClaimDraft(section=c.section, text=c.text, chunk_id="still-not-a-real-chunk-id") for c in claims]
+
+    monkeypatch.setattr("app.orchestration.llm.call_repair", _fake_repair_still_fails)
+
+
+@pytest.fixture
+def fake_synthesize_with_personas(monkeypatch, fake_plan):
+    """target_audience's combined claims+personas call site, happy path."""
+
+    def _fake(section: str, context):
+        chunk = context.chunks[0]
+        claims = [ClaimDraft(section=section, text="Acme Roasters targets busy professionals.", chunk_id=chunk.chunk_id)]
+        personas = [
+            AudiencePersonaDraft(
+                section=section,
+                name="Busy professional",
+                pain_points=["No time to brew coffee well"],
+                interests=["Convenience", "Quality"],
+                chunk_ids=[chunk.chunk_id],
+            )
+        ]
+        return claims, personas
+
+    monkeypatch.setattr("app.orchestration.llm.call_synthesize_with_personas", _fake)
+
+
+@pytest.fixture
 def fake_synthesize_empty(monkeypatch, fake_plan):
     """Synthesize finds no evidence worth claiming anything from -- the
     honest-empty-section path (dev_guidelines.md §11), as opposed to a
@@ -101,12 +154,30 @@ def fake_full_document_pipeline(monkeypatch, fake_plan):
     """Covers every LLM call site run_all_sections can reach for union and
     synthesis_only sections, so a full 11-section document can be exercised
     without a real network call. Core-gated and direct_input sections aren't
-    mocked here -- they never reach an LLM call site at all in Step 2."""
+    mocked here -- they never reach an LLM call site at all in Step 2/3.
+    target_audience's combined claims+personas call site is included so the
+    resulting document can actually satisfy QualityCheckpoint.personas_grounded
+    (competitor_count_ok is satisfied differently -- insufficient_evidence is
+    exempt, not faked, since Core genuinely doesn't exist yet)."""
     from app.domain.claim import DerivedClaimDraft
 
     def _fake_synthesize(section: str, context):
         chunk = context.chunks[0]
         return [ClaimDraft(section=section, text=f"Grounded claim for {section}.", chunk_id=chunk.chunk_id)]
+
+    def _fake_synthesize_with_personas(section: str, context):
+        chunk = context.chunks[0]
+        claims = [ClaimDraft(section=section, text=f"Grounded claim for {section}.", chunk_id=chunk.chunk_id)]
+        personas = [
+            AudiencePersonaDraft(
+                section=section,
+                name="Busy professional",
+                pain_points=["No time to brew coffee well"],
+                interests=["Convenience", "Quality"],
+                chunk_ids=[chunk.chunk_id],
+            )
+        ]
+        return claims, personas
 
     def _fake_synthesize_from_prior(section: str, upstream, missing_sections):
         claim = upstream[0].claims[0]
@@ -115,4 +186,5 @@ def fake_full_document_pipeline(monkeypatch, fake_plan):
         ]
 
     monkeypatch.setattr("app.orchestration.llm.call_synthesize", _fake_synthesize)
+    monkeypatch.setattr("app.orchestration.llm.call_synthesize_with_personas", _fake_synthesize_with_personas)
     monkeypatch.setattr("app.orchestration.llm.call_synthesize_from_prior", _fake_synthesize_from_prior)

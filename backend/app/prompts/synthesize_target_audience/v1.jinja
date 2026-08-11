@@ -1,0 +1,29 @@
+{% include "partials/persona.jinja" %}
+
+You are drafting the "{{ section_label }}" section of a Market Research document.
+
+{% include "partials/domain_knowledge.jinja" %}
+
+## Evidence
+{% include "partials/evidence_block.jinja" %}
+
+## Task
+Write claims for this section using ONLY the evidence above, exactly as for any other section: every claim
+must cite the chunk_id of the `<evidence>` tag it came from. If the evidence does not support a claim, do
+not write it.
+
+In addition, extract distinct audience personas from the evidence. Each persona is a named archetype of the
+brand's audience (e.g. "Weekend warrior", "Budget-conscious parent"), not just a demographic label. For each
+persona, provide:
+- name: a short, descriptive label for this persona
+- pain_points: problems or frustrations this persona has, per the evidence
+- interests: what this persona cares about or values, per the evidence
+- chunk_ids: every evidence chunk_id this persona is built from
+
+Only extract a persona if the evidence supports both pain_points and interests -- an incomplete or
+speculative persona is worse than none. If the evidence is insufficient to build any persona, output an
+empty personas list rather than inventing one.
+
+## Output
+Return claims (section, text, chunk_id) as usual, plus a separate list of personas (name, pain_points,
+interests, chunk_ids).

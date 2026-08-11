@@ -56,3 +56,10 @@ def render_repair(ctx: RepairContext, version: str = "v1") -> str:
 
 def render_synthesize_from_prior(ctx: SynthesizeFromPriorContext, version: str = "v1") -> str:
     return _env.get_template(f"synthesize_from_prior/{version}.jinja").render(**ctx.model_dump())
+
+
+def render_synthesize_target_audience(ctx: SynthesizeContext, version: str = "v1") -> str:
+    # Reuses SynthesizeContext's shape as-is (section_id/section_label/chunks/
+    # domain_facts) -- the persona-extraction task only needs a different
+    # template, not a different input shape.
+    return _env.get_template(f"synthesize_target_audience/{version}.jinja").render(**ctx.model_dump())

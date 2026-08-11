@@ -1,6 +1,7 @@
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel
 
+from app.domain.audience_persona import AudiencePersonaDraft, VerifiedAudiencePersona
 from app.domain.claim import ClaimDraft, VerifiedClaim
 from app.domain.deliverable import Deliverable
 from app.domain.retrieval import RetrievalPlan, RetrievedContext
@@ -15,6 +16,10 @@ class RunState(BaseModel):
     context: RetrievedContext | None = None
     claims: list[ClaimDraft] = []
     verified: list[VerifiedClaim] = []
+    # target_audience only (SectionSpec.extracts_audience_personas) -- empty
+    # for every other section.
+    persona_drafts: list[AudiencePersonaDraft] = []
+    personas: list[VerifiedAudiencePersona] = []
     repair_attempted: bool = False
     deliverable: Deliverable | None = None
 
@@ -27,24 +32,35 @@ def plan_node(state: RunState) -> RunState:
 
 
 def retrieve_node(state: RunState) -> RunState:
-    from app.retrieval.dense import search_dense
+    from app.retrieval.hybrid import search_hybrid
 
-    chunks = search_dense(kb_id=state.kb_id, plan=state.plan)
+    chunks = search_hybrid(kb_id=state.kb_id, plan=state.plan)
     state.context = RetrievedContext(chunks=chunks, plan=state.plan)
     return state
 
 
 def synthesize_node(state: RunState) -> RunState:
-    from app.orchestration.llm import call_synthesize
+    from app.domain.sop1 import SECTIONS_BY_ID
 
-    state.claims = call_synthesize(section=state.section, context=state.context)
+    if SECTIONS_BY_ID[state.section].extracts_audience_personas:
+        from app.orchestration.llm import call_synthesize_with_personas
+
+        state.claims, state.persona_drafts = call_synthesize_with_personas(
+            section=state.section, context=state.context
+        )
+    else:
+        from app.orchestration.llm import call_synthesize
+
+        state.claims = call_synthesize(section=state.section, context=state.context)
     return state
 
 
 def verify_node(state: RunState) -> RunState:
-    from app.domain.verify import verify_claims
+    from app.domain.verify import verify_audience_personas, verify_claims
 
     state.verified = verify_claims(state.claims, state.context)
+    if state.persona_drafts:
+        state.personas = verify_audience_personas(state.persona_drafts, state.context)
     return state
 
 

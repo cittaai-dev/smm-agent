@@ -42,6 +42,21 @@ def test_fabricated_citation_rejected(sample_file, fake_synthesize_fabricated):
     assert result.deliverable.status == "pending_approval"
 
 
+def test_repair_fires_once_then_degrades_when_still_unresolved(
+    sample_file, fake_synthesize_fabricated_unrepairable
+):
+    # the other half of the bounded-retry guarantee: repair gets exactly one
+    # attempt, and if that attempt *still* doesn't resolve, the pipeline
+    # degrades rather than silently retrying repair again (pipeline.md §5.3).
+    ingest_file(brand_id="test-brand", file_path=sample_file)
+
+    result = run_pipeline(brand_id="test-brand")
+
+    assert result.deliverable.call_site_trace["repair"] == 1
+    assert not any(c.verified for c in result.deliverable.claims)
+    assert result.deliverable.status == "insufficient_grounding"
+
+
 def test_idempotent_reupload(sample_file):
     ingest_file(brand_id="test-brand", file_path=sample_file)
     count_1 = _chunk_count("test-brand")

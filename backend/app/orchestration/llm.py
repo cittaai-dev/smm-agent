@@ -1,10 +1,12 @@
 from pydantic import BaseModel
 
+from app.domain.audience_persona import AudiencePersonaDraft
 from app.domain.claim import ClaimDraft, DerivedClaimDraft
 from app.domain.retrieval import RetrievalPlan, RetrievedContext
 from app.domain.sop1 import SECTION_LABELS
 from app.domain_knowledge.store import facts_for
 from app.infra.settings import llm_settings
+from app.infra.telemetry import traced_call_site
 from app.orchestration.tracing import traced_llm_call
 from app.prompts.render import (
     PlanContext,
@@ -16,6 +18,7 @@ from app.prompts.render import (
     render_repair,
     render_synthesize,
     render_synthesize_from_prior,
+    render_synthesize_target_audience,
 )
 
 
@@ -34,6 +37,11 @@ class _SynthesisOutput(BaseModel):
     claims: list[ClaimDraft]
 
 
+class _SynthesisWithPersonasOutput(BaseModel):
+    claims: list[ClaimDraft]
+    personas: list[AudiencePersonaDraft]
+
+
 class _DerivedSynthesisOutput(BaseModel):
     claims: list[DerivedClaimDraft]
 
@@ -50,6 +58,7 @@ def _client():
 
 
 @traced_llm_call("plan")
+@traced_call_site("plan")
 def call_plan(section: str, brand_id: str) -> RetrievalPlan:
     prompt = render_plan(
         PlanContext(brand_id=brand_id, section_id=section, section_label=SECTION_LABELS[section])
@@ -63,6 +72,7 @@ def call_plan(section: str, brand_id: str) -> RetrievalPlan:
 
 
 @traced_llm_call("synthesize")
+@traced_call_site("synthesize")
 def call_synthesize(section: str, context: RetrievedContext) -> list[ClaimDraft]:
     ctx = SynthesizeContext(
         section_id=section,
@@ -81,6 +91,32 @@ def call_synthesize(section: str, context: RetrievedContext) -> list[ClaimDraft]
 
 
 @traced_llm_call("synthesize")
+@traced_call_site("synthesize")
+def call_synthesize_with_personas(
+    section: str, context: RetrievedContext
+) -> tuple[list[ClaimDraft], list[AudiencePersonaDraft]]:
+    """Same call site as call_synthesize (P2 counts it once) -- one combined
+    structured output (claims + personas) in a single call, not two separate
+    generative calls, which would make this a 4th call site in spirit even if
+    call-count tracing didn't happen to enforce it."""
+    ctx = SynthesizeContext(
+        section_id=section,
+        section_label=SECTION_LABELS[section],
+        chunks=context.chunks,
+        domain_facts=facts_for(section),
+    )
+    prompt = render_synthesize_target_audience(ctx)
+    parsed = _client().beta.chat.completions.parse(
+        model=llm_settings.synthesize_model,
+        temperature=llm_settings.synthesize_temperature,
+        messages=[{"role": "system", "content": prompt}],
+        response_format=_SynthesisWithPersonasOutput,
+    ).choices[0].message.parsed
+    return parsed.claims, parsed.personas
+
+
+@traced_llm_call("synthesize")
+@traced_call_site("synthesize")
 def call_synthesize_from_prior(
     section: str, upstream: list[UpstreamSectionClaims], missing_sections: list[str]
 ) -> list[DerivedClaimDraft]:
@@ -105,6 +141,7 @@ def call_synthesize_from_prior(
 
 
 @traced_llm_call("repair")
+@traced_call_site("repair")
 def call_repair(claims: list[ClaimDraft], context: RetrievedContext) -> list[ClaimDraft]:
     known_ids = {c.chunk_id for c in context.chunks}
     rejected = [c for c in claims if c.chunk_id is None or c.chunk_id not in known_ids]
