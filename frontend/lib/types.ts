@@ -87,3 +87,68 @@ export interface BridgePair {
   run_chunk: BridgeChunk;
   core_chunk: BridgeChunk;
 }
+
+// Step 5: trust boundary types. Hand-written for the same reason as the Step
+// 4 block above -- re-run `gen:api-types` and delete these once these
+// endpoints are exercised against a running backend.
+export type ApprovalDecisionKind = "approved" | "rejected" | "resubmitted";
+
+export interface ApprovalEvent {
+  id: number | null;
+  document_id: string;
+  decision: ApprovalDecisionKind;
+  approver_id: string;
+  note: string | null;
+  checkpoint: QualityCheckpoint | null;
+  decided_at: string | null;
+}
+
+export interface DistributionLink {
+  id: string;
+  document_id: string;
+  created_by: string;
+  expires_at: string;
+  revoked: boolean;
+  created_at: string | null;
+}
+
+export interface DistributionLinkCreated {
+  id: string;
+  token: string;
+  expires_at: string;
+}
+
+export interface ClientClaim {
+  text: string;
+}
+
+export interface ClientPersona {
+  name: string;
+  pain_points: string[];
+  interests: string[];
+}
+
+export interface ClientMarketResearchView {
+  brand_id: string;
+  sections: Record<string, ClientClaim[]>;
+  personas: ClientPersona[];
+}
+
+export type DataSourceKind = "google_trends" | "newsapi" | "youtube" | "scrapy_competitor";
+
+export interface DataSourceCredentialSummary {
+  source: DataSourceKind;
+  rate_limit_per_hour: number;
+  created_at: string | null;
+  last_used_at: string | null;
+}
+
+export interface MarketSegment {
+  brand_id: string;
+  segment_name: string;
+  youtube_channel_keywords: string[];
+  news_sources: string[];
+  reddit_communities: string[];
+  website_urls: string[];
+  max_competitors_to_track: number;
+}

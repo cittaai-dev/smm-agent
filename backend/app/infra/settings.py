@@ -89,6 +89,25 @@ class WebToolSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SMM_WEBTOOL_", env_file=".env", extra="ignore")
 
 
+class CredentialSettings(BaseSettings):
+    # Fernet key for data_source_credential.encrypted_api_key
+    # (infra/crypto.py). This default is dev-only and deliberately obvious as
+    # such -- any real deployment must set SMM_CREDENTIAL_ENCRYPTION_KEY to a
+    # key generated via `Fernet.generate_key()`, never this one.
+    encryption_key: str = "zH1qN3W8Y5vQvT6b0fJk2mR7sL9dP4cX1aE6gI3oU8s="
+
+    model_config = SettingsConfigDict(env_prefix="SMM_CREDENTIAL_", env_file=".env", extra="ignore")
+
+
+class RateLimitSettings(BaseSettings):
+    # Per-brand, per-source, per-hour bucket (step5_trust_boundary.md Part D
+    # §7) -- a default here, overridable per-credential
+    # (DataSourceCredential.rate_limit_per_hour) at insert time.
+    default_per_hour: int = 60
+
+    model_config = SettingsConfigDict(env_prefix="SMM_RATE_LIMIT_", env_file=".env", extra="ignore")
+
+
 db_settings = DBSettings()
 api_settings = ApiSettings()
 llm_settings = LLMSettings()
@@ -97,3 +116,5 @@ core_ingest_settings = CoreIngestSettings()
 eval_gate_settings = EvalGateSettings()
 bridge_settings = BridgeSettings()
 webtool_settings = WebToolSettings()
+credential_settings = CredentialSettings()
+rate_limit_settings = RateLimitSettings()

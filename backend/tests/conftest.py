@@ -41,7 +41,9 @@ def clean_db():
             "team_input, market_research_document, strategic_note, "
             "approval_gate, distribution_record, rerank_cache, "
             "brand_grant, api_key, brand, app_user, "
-            "promotion_request, kb_version, golden_case, core_competitor_registry CASCADE"
+            "promotion_request, kb_version, golden_case, core_competitor_registry, "
+            "approval_event, distribution_event, distribution_link, "
+            "data_source_credential, market_segment, collection_job_status CASCADE"
         )
         session.commit()
     yield

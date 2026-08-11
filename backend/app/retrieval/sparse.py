@@ -8,12 +8,13 @@ def search_sparse(kb_id: str, plan: RetrievalPlan) -> list[Chunk]:
     0005), unioned across sub-queries, deduped by chunk_id -- same shape as
     search_dense so hybrid.py can fuse the two result sets directly."""
     seen: dict[str, Chunk] = {}
-    with get_session() as session:
+    with get_session(kb_id=kb_id) as session:
         for query in plan.sub_queries:
             rows = session.execute(
                 """SELECT chunk_id, kb_id, doc_id, lower(block_span) AS lo, upper(block_span) - 1 AS hi,
-                          text, order_confidence, degraded
+                          text, order_confidence, degraded, collected_at, valid_until, data_source
                    FROM chunk WHERE kb_id = :kb AND tsv @@ plainto_tsquery('english', :q)
+                          AND (valid_until IS NULL OR valid_until > now())
                    ORDER BY ts_rank(tsv, plainto_tsquery('english', :q)) DESC LIMIT :k""",
                 {"kb": kb_id, "q": query, "k": plan.k_per_query},
             ).mappings()
@@ -28,5 +29,8 @@ def search_sparse(kb_id: str, plan: RetrievalPlan) -> list[Chunk]:
                     text=row["text"],
                     order_confidence=row["order_confidence"],
                     degraded=row["degraded"],
+                    collected_at=row["collected_at"],
+                    valid_until=row["valid_until"],
+                    data_source=row["data_source"],
                 )
     return list(seen.values())

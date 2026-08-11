@@ -17,8 +17,8 @@ def infer_source_kind(file_path: str) -> str:
     return "analytics" if Path(file_path).suffix.lower() in _ANALYTICS_EXTS else "brand_material"
 
 
-def _mark_source_file(file_id: str, status: str, reason: str | None) -> None:
-    with get_session() as session:
+def _mark_source_file(file_id: str, brand_id: str, status: str, reason: str | None) -> None:
+    with get_session(kb_id=f"run:{brand_id}") as session:
         session.execute(
             "UPDATE source_file SET status = :status, degraded_reason = :reason WHERE file_id = :fid",
             {"status": status, "reason": reason, "fid": file_id},
@@ -40,7 +40,7 @@ def ingest_file(brand_id: str, file_path: str, source_kind: str | None = None) -
     doc_id = f"doc-{hashlib.sha256(f'{kb_id}:{content_hash}'.encode()).hexdigest()[:12]}"
     file_id = f"file-{hashlib.sha256(f'{kb_id}:{content_hash}'.encode()).hexdigest()[:12]}"
 
-    with get_session() as session:
+    with get_session(kb_id=kb_id) as session:
         existing = session.execute(
             "SELECT 1 FROM document_registry WHERE kb_id = :kb AND content_hash = :h",
             {"kb": kb_id, "h": content_hash},
@@ -69,17 +69,17 @@ def ingest_file(brand_id: str, file_path: str, source_kind: str | None = None) -
         # python-pptx/pandas each raise their own exception types for corrupt
         # input; narrowing to one library's type would leave the other three
         # unguarded, which defeats the point.
-        _mark_source_file(file_id, "degraded", str(e))
+        _mark_source_file(file_id, brand_id, "degraded", str(e))
         return "degraded"
 
     non_empty = [b for b in blocks if b.text.strip()]
     if not non_empty:
         # Scanned/image-only content, empty spreadsheet, etc. -- honestly
         # nothing to chunk, not a chunk-level C1 violation to paper over.
-        _mark_source_file(file_id, "degraded", "no extractable text")
+        _mark_source_file(file_id, brand_id, "degraded", "no extractable text")
         return "degraded"
 
-    with get_session() as session:
+    with get_session(kb_id=kb_id) as session:
         session.execute(
             """INSERT INTO document_registry (doc_id, kb_id, content_hash, source_uri, source_kind)
                VALUES (:doc_id, :kb_id, :hash, :uri, :kind)""",
@@ -118,5 +118,5 @@ def ingest_file(brand_id: str, file_path: str, source_kind: str | None = None) -
             )
         session.commit()
 
-    _mark_source_file(file_id, "ingested", None)
+    _mark_source_file(file_id, brand_id, "ingested", None)
     return "ingested"

@@ -8,13 +8,13 @@ def search_dense(kb_id: str, plan: RetrievalPlan) -> list[Chunk]:
     """Dense-only pgvector cosine search, unioned across sub-queries, deduped by
     chunk_id. Hybrid+rerank lands in Step 3 — this is the P5 floor it degrades to."""
     seen: dict[str, Chunk] = {}
-    with get_session() as session:
+    with get_session(kb_id=kb_id) as session:
         for query in plan.sub_queries:
             qvec = embedding_to_sql(embed(query))
             rows = session.execute(
                 """SELECT chunk_id, kb_id, doc_id, lower(block_span) AS lo, upper(block_span) - 1 AS hi,
-                          text, order_confidence, degraded
-                   FROM chunk WHERE kb_id = :kb
+                          text, order_confidence, degraded, collected_at, valid_until, data_source
+                   FROM chunk WHERE kb_id = :kb AND (valid_until IS NULL OR valid_until > now())
                    ORDER BY embedding <=> (:qvec)::vector LIMIT :k""",
                 {"kb": kb_id, "qvec": qvec, "k": plan.k_per_query},
             ).mappings()
@@ -29,5 +29,8 @@ def search_dense(kb_id: str, plan: RetrievalPlan) -> list[Chunk]:
                     text=row["text"],
                     order_confidence=row["order_confidence"],
                     degraded=row["degraded"],
+                    collected_at=row["collected_at"],
+                    valid_until=row["valid_until"],
+                    data_source=row["data_source"],
                 )
     return list(seen.values())

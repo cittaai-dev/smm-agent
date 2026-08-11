@@ -1,10 +1,17 @@
 import type {
   ApprovalChoice,
+  ApprovalEvent,
   ApprovalGateRecord,
+  ClientMarketResearchView,
+  DataSourceCredentialSummary,
+  DataSourceKind,
+  DistributionLink,
+  DistributionLinkCreated,
   DistributionRecord,
   EvalGateResult,
   KBVersion,
   MarketResearchDocument,
+  MarketSegment,
   QualityCheckpoint,
   SourceFile,
   SourceKind,
@@ -150,6 +157,52 @@ export function getDistribution(documentId: string): Promise<DistributionRecord 
   return request<DistributionRecord | null>(`/documents/${encodeURIComponent(documentId)}/distribution`);
 }
 
+export function getApprovalHistory(documentId: string): Promise<ApprovalEvent[]> {
+  return request<ApprovalEvent[]>(`/documents/${encodeURIComponent(documentId)}/approval-history`);
+}
+
+export function rerunDocument(documentId: string): Promise<MarketResearchDocument> {
+  return request<MarketResearchDocument>(`/documents/${encodeURIComponent(documentId)}/rerun`, {
+    method: "POST",
+  });
+}
+
+export function resubmitDocument(
+  documentId: string,
+  approverId: string,
+  note: string,
+): Promise<MarketResearchDocument> {
+  return request<MarketResearchDocument>(`/documents/${encodeURIComponent(documentId)}/resubmit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ approver_id: approverId, note }),
+  });
+}
+
+export function listDistributionLinks(documentId: string): Promise<DistributionLink[]> {
+  return request<DistributionLink[]>(`/documents/${encodeURIComponent(documentId)}/distribution-links`);
+}
+
+export function createDistributionLink(
+  documentId: string,
+  createdBy: string,
+  ttlDays = 30,
+): Promise<DistributionLinkCreated> {
+  return request<DistributionLinkCreated>(`/documents/${encodeURIComponent(documentId)}/distribution-links`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ created_by: createdBy, ttl_days: ttlDays }),
+  });
+}
+
+export function revokeDistributionLink(linkId: string): Promise<{ id: string; revoked: boolean }> {
+  return request(`/distribution-links/${encodeURIComponent(linkId)}/revoke`, { method: "POST" });
+}
+
+export function getClientView(token: string): Promise<ClientMarketResearchView> {
+  return request<ClientMarketResearchView>(`/client/view/${encodeURIComponent(token)}`);
+}
+
 // Step 4: Market Intel Core console -- all requests need the api-key header
 // (api/deps.py's current_user), unlike the brand-workflow endpoints above
 // which don't enforce auth yet (Step 4's gate lands as a separate PR).
@@ -202,6 +255,55 @@ export function decidePromotion(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ decision }),
+    }),
+  );
+}
+
+// Step 5 Part D: per-brand data source credentials + market segment
+// whitelist -- both gated by resolve_brand_scope, same api-key discipline as
+// the Core console above.
+export function saveDataSourceCredential(
+  apiKey: string,
+  brandId: string,
+  source: DataSourceKind,
+  sourceApiKey: string,
+  rateLimitPerHour = 60,
+): Promise<{ status: string; source: DataSourceKind }> {
+  return request(
+    `/brands/${encodeURIComponent(brandId)}/data-sources/credentials`,
+    withApiKey(apiKey, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source, api_key: sourceApiKey, rate_limit_per_hour: rateLimitPerHour }),
+    }),
+  );
+}
+
+export function listDataSourceCredentials(
+  apiKey: string,
+  brandId: string,
+): Promise<DataSourceCredentialSummary[]> {
+  return request(
+    `/brands/${encodeURIComponent(brandId)}/data-sources/credentials`,
+    withApiKey(apiKey),
+  );
+}
+
+export function getMarketSegment(apiKey: string, brandId: string): Promise<MarketSegment | null> {
+  return request(`/brands/${encodeURIComponent(brandId)}/market-segments`, withApiKey(apiKey));
+}
+
+export function setMarketSegment(
+  apiKey: string,
+  brandId: string,
+  segment: Omit<MarketSegment, "brand_id">,
+): Promise<MarketSegment> {
+  return request(
+    `/brands/${encodeURIComponent(brandId)}/market-segments`,
+    withApiKey(apiKey, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(segment),
     }),
   );
 }
