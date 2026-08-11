@@ -163,8 +163,8 @@ def test_rerun_after_insufficient_grounding_overwrites_stale_claims(
     # not `claims`/`call_site_trace`, GET /deliverables/{id} (what the review
     # page actually reads) stays stuck showing the first run's empty claims
     # forever, no matter how many times research is rerun.
-    from app.main import app
     from app.domain.claim import ClaimDraft
+    from app.main import app
 
     ingest_file(brand_id="test-brand", file_path=sample_file)
 

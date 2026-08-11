@@ -9,6 +9,8 @@ from pydantic import BaseModel
 from starlette.requests import Request
 
 from app.domain.deliverable import Deliverable
+from app.domain.market_research_document import MarketResearchDocument
+from app.domain.sop1 import SECTIONS_BY_ID
 from app.infra.db import get_session
 from app.infra.settings import api_settings
 from app.orchestration.llm import LLMNotConfiguredError
@@ -40,6 +42,34 @@ class ApprovalDecision(BaseModel):
     note: str | None = None
 
 
+class TeamInputPayload(BaseModel):
+    text: str
+    author: str | None = None
+
+
+@app.put("/brands/{brand_id}/sections/{section_id}/team-input")
+async def set_team_input(brand_id: str, section_id: str, payload: TeamInputPayload) -> dict:
+    spec = SECTIONS_BY_ID.get(section_id)
+    if spec is None or spec.retrieval_mode != "direct_input":
+        # Server-enforced, not a frontend-only restriction: storing text against
+        # a section nothing will ever read it from is a silent data-loss bug
+        # waiting to happen, not a valid request.
+        raise HTTPException(422, detail=f"'{section_id}' does not accept direct team input")
+    if not payload.text.strip():
+        raise HTTPException(422, detail="text must not be empty")
+
+    with get_session() as session:
+        session.execute(
+            """INSERT INTO team_input (brand_id, section, text, author)
+               VALUES (:brand_id, :section, :text, :author)
+               ON CONFLICT (brand_id, section) DO UPDATE SET
+                   text = EXCLUDED.text, author = EXCLUDED.author, updated_at = now()""",
+            {"brand_id": brand_id, "section": section_id, "text": payload.text, "author": payload.author},
+        )
+        session.commit()
+    return {"status": "saved"}
+
+
 @app.post("/brands/{brand_id}/sources")
 async def upload_source(brand_id: str, file: UploadFile):
     _UPLOAD_DIR.mkdir(exist_ok=True)
@@ -59,6 +89,40 @@ async def run_research(brand_id: str) -> Deliverable:
     result = run_pipeline(brand_id=brand_id)
     _save_deliverable(result.deliverable)
     return result.deliverable
+
+
+@app.post("/brands/{brand_id}/research/run-all")
+async def run_all_research(brand_id: str) -> MarketResearchDocument:
+    from app.orchestration.section_runner import assemble_document, run_all_sections
+
+    results = run_all_sections(brand_id)
+    document = assemble_document(brand_id, results)
+    _save_document(document)
+    return document
+
+
+@app.get("/documents/{document_id}")
+async def get_document(document_id: str) -> MarketResearchDocument | None:
+    return _load_document(document_id)
+
+
+@app.post("/documents/{document_id}/approve")
+async def approve_document(document_id: str, decision: ApprovalDecision) -> MarketResearchDocument:
+    document = _load_document(document_id)
+    if document is None:
+        raise HTTPException(404, detail=f"no such document: {document_id}")
+    if document.status != "pending_approval":
+        raise HTTPException(409, detail=f"cannot transition from {document.status}")
+    has_any_claims = any(s.claims for s in document.sections.values())
+    if decision.decision == "approved" and not has_any_claims:
+        # Belt-and-suspenders like the deliverable gate above: assemble_document
+        # already routes an all-empty run to insufficient_grounding, never
+        # pending_approval, but a document's approvability shouldn't depend
+        # solely on which code path produced the row.
+        raise HTTPException(422, detail="cannot approve a document with zero claims across all sections")
+    document.status = decision.decision
+    _save_document(document)
+    return document
 
 
 @app.get("/deliverables/{deliverable_id}")
@@ -117,6 +181,46 @@ def _save_deliverable(deliverable: Deliverable) -> None:
                 "status": deliverable.status,
                 "claims": json.dumps([c.model_dump() for c in deliverable.claims]),
                 "trace": json.dumps(deliverable.call_site_trace),
+            },
+        )
+        session.commit()
+
+
+def _load_document(document_id: str) -> MarketResearchDocument | None:
+    with get_session() as session:
+        row = session.execute(
+            "SELECT id, brand_id, status, sections, call_site_trace FROM market_research_document "
+            "WHERE id = :id",
+            {"id": document_id},
+        ).mappings().first()
+    if row is None:
+        return None
+    return MarketResearchDocument(
+        id=row["id"],
+        brand_id=row["brand_id"],
+        status=row["status"],
+        sections=row["sections"],
+        call_site_trace=row["call_site_trace"],
+    )
+
+
+def _save_document(document: MarketResearchDocument) -> None:
+    import json
+
+    with get_session() as session:
+        session.execute(
+            """INSERT INTO market_research_document (id, brand_id, status, sections, call_site_trace)
+               VALUES (:id, :brand_id, :status, (:sections)::jsonb, (:trace)::jsonb)
+               ON CONFLICT (id) DO UPDATE SET
+                   status = EXCLUDED.status,
+                   sections = EXCLUDED.sections,
+                   call_site_trace = EXCLUDED.call_site_trace""",
+            {
+                "id": document.id,
+                "brand_id": document.brand_id,
+                "status": document.status,
+                "sections": json.dumps({k: v.model_dump() for k, v in document.sections.items()}),
+                "trace": json.dumps(document.call_site_trace),
             },
         )
         session.commit()
