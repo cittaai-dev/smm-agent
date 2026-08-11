@@ -53,6 +53,20 @@ def test_idempotent_reupload(sample_file):
     assert count_1 > 0
 
 
+def test_cors_allows_configured_frontend_origin():
+    from app.main import app
+
+    client = TestClient(app)
+    response = client.options(
+        "/brands/acme/sources",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
 def test_approval_gate_blocks_default(sample_file, fake_synthesize_grounded):
     ingest_file(brand_id="test-brand", file_path=sample_file)
 

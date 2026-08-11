@@ -3,12 +3,21 @@ from typing import Literal
 from uuid import uuid4
 
 from fastapi import FastAPI, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app.domain.deliverable import Deliverable
 from app.infra.db import get_session
+from app.infra.settings import api_settings
 
 app = FastAPI(title="smm-agent")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=api_settings.cors_origin_list,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 _UPLOAD_DIR = Path("uploads")
 

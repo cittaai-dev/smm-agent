@@ -16,6 +16,9 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:dev@postgres/smm
       REDIS_URL: redis://redis
+      # The browser calls the API from the frontend's origin, not the docker
+      # network -- this must match wherever the frontend is actually served.
+      SMM_API_CORS_ORIGINS: http://localhost:3000
     ports: ["8000:8000"]
   worker:
     build: ../backend
