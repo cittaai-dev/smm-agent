@@ -1,0 +1,5 @@
+- [Project overview](project_overview.md) — smm-agent = SOP-01 Market Research agent; real-world SMM agent, not the D365 template mockups
+- [Engineering principles](engineering_principles.md) — grounding, 3 call sites, degrade-not-fail, two-KB separation, server-enforced gates
+- [TDD policy](tdd_policy.md) — user wants minimal-effort TDD, integration-first, unit tests only for core/pure logic
+- [Implementation roadmap](implementation_roadmap.md) — Steps 1-9 staged plan, Step 1 not yet started as of 2026-08-11
+- [Git identity policy](git_identity_policy.md) — push under cittaai-dev not kranthy09; ask before creating GitHub remote/origin

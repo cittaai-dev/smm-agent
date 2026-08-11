@@ -11,15 +11,22 @@ def ingest_file(brand_id: str, file_path: str) -> str:
     with open(file_path, "rb") as f:
         content_hash = hashlib.sha256(f.read()).hexdigest()
 
+    kb_id = f"run:{brand_id}"
+
     with get_session() as session:
         existing = session.execute(
-            "SELECT 1 FROM document_registry WHERE content_hash = :h", {"h": content_hash}
+            "SELECT 1 FROM document_registry WHERE kb_id = :kb AND content_hash = :h",
+            {"kb": kb_id, "h": content_hash},
         ).first()
         if existing:
             return "skipped-duplicate"
 
-        doc_id = f"doc-{content_hash[:12]}"
-        kb_id = f"run:{brand_id}"
+        # doc_id (and therefore chunk_id, which is derived from it below) must be
+        # scoped by kb_id too, not just content_hash -- otherwise two different
+        # brands uploading identical content would collide on the same doc_id/
+        # chunk_id PRIMARY KEY the moment the content_hash uniqueness constraint
+        # stopped blocking them.
+        doc_id = f"doc-{hashlib.sha256(f'{kb_id}:{content_hash}'.encode()).hexdigest()[:12]}"
         session.execute(
             """INSERT INTO document_registry (doc_id, kb_id, content_hash, source_uri)
                VALUES (:doc_id, :kb_id, :hash, :uri)""",

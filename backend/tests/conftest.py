@@ -66,3 +66,15 @@ def fake_synthesize_fabricated(monkeypatch, fake_plan):
         return [ClaimDraft(section=c.section, text=c.text, chunk_id=chunk.chunk_id) for c in claims]
 
     monkeypatch.setattr("app.orchestration.llm.call_repair", _fake_repair)
+
+
+@pytest.fixture
+def fake_synthesize_empty(monkeypatch, fake_plan):
+    """Synthesize finds no evidence worth claiming anything from -- the
+    honest-empty-section path (dev_guidelines.md §11), as opposed to a
+    fabricated citation."""
+
+    def _fake(section: str, context):
+        return []
+
+    monkeypatch.setattr("app.orchestration.llm.call_synthesize", _fake)

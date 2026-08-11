@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -70,7 +70,14 @@ async def get_deliverable(deliverable_id: str) -> Deliverable | None:
 async def approve(deliverable_id: str, decision: ApprovalDecision) -> Deliverable:
     deliverable = _load_deliverable(deliverable_id)
     if deliverable is None:
-        raise ValueError(f"no such deliverable: {deliverable_id}")
+        raise HTTPException(404, detail=f"no such deliverable: {deliverable_id}")
+    if deliverable.status != "pending_approval":
+        raise HTTPException(409, detail=f"cannot transition from {deliverable.status}")
+    if decision.decision == "approved" and len(deliverable.claims) == 0:
+        # Step 3 formalizes this as QualityCheckpoint; this is its minimum
+        # viable form landing early -- an empty deliverable (e.g. retrieval
+        # found nothing) must never be silently approvable.
+        raise HTTPException(422, detail="cannot approve a deliverable with zero claims")
     deliverable.status = decision.decision
     _save_deliverable(deliverable)
     return deliverable
@@ -100,7 +107,10 @@ def _save_deliverable(deliverable: Deliverable) -> None:
         session.execute(
             """INSERT INTO deliverable (id, brand_id, status, claims, call_site_trace)
                VALUES (:id, :brand_id, :status, (:claims)::jsonb, (:trace)::jsonb)
-               ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status""",
+               ON CONFLICT (id) DO UPDATE SET
+                   status = EXCLUDED.status,
+                   claims = EXCLUDED.claims,
+                   call_site_trace = EXCLUDED.call_site_trace""",
             {
                 "id": deliverable.id,
                 "brand_id": deliverable.brand_id,
