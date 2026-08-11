@@ -1,0 +1,66 @@
+STANDARD OPERATING PROCEDURE
+Market Research
+How to carry out complete market research (including competitor analysis) for a brand.
+SOP-01  •  Version 1.1  •  Stage 1 of 7 in the cycle
+
+The full workflow cycle. This SOP covers the highlighted stage: Market Research.
+SOP ID
+SOP-01  (Version 1.1)
+Starts when
+A brand is onboarded, OR a reporting cycle finishes and research needs refreshing.
+Primary owner
+Team Lead (with Social Media Manager & Graphic Designer)
+Typical turnaround
+3 to 5 working days (new brand); 2 to 3 days (refresh).
+Output goes to
+Branding & Guidelines (SOP-02) and Content Calendar (SOP-03).
+
+Purpose & scope
+This SOP explains how to research a brand, its audience, its market, and its competitors, and turn the findings into one clear market research document. It is followed every time a new brand joins and every time the cycle repeats after reporting.
+Roles & responsibilities
+Note:  Your team has four roles: Team Lead, Social Media Manager, Graphic Designer, and the Content Team (production). Where a stage is shared, adjust the exact split to match how you work.
+
+Role
+Responsibility in this stage
+Team Lead
+Owns the stage, confirms the brand's goals, reviews the research, gives final approval, and handles client communication.
+Social Media Manager
+Carries out the research and competitor analysis and writes the document.
+Graphic Designer
+Studies competitors' visual style and content formats and notes design opportunities.
+
+What you need before you start (inputs)
+Signed onboarding form and the client's basic details.
+Brand website and existing social media profiles.
+Any brand material the client shares.
+For a repeat cycle: the latest performance reports from the Reporting stage.
+Procedure (step by step)
+1.  Team Lead collects the onboarding information and shares it with the Social Media Manager.
+2.  Social Media Manager studies the brand: products, services, history, and current situation.
+3.  Team Lead confirms the brand's goals and objectives.
+4.  Social Media Manager researches the target audience and builds 2 to 3 audience personas.
+5.  Social Media Manager studies the market: its size, growth, trends, opportunities, and challenges.
+6.  Together the team identifies the 3 to 5 main competitors.
+7.  Social Media Manager records each competitor's offer, positioning, strengths, weaknesses, content types, posting frequency, and engagement; Graphic Designer notes their visual style and content formats.
+8.  Social Media Manager does a SWOT analysis of the brand.
+9.  Team Lead and Social Media Manager define the brand's positioning and Unique Selling Point (USP).
+10.  The team identifies the best platforms and current content opportunities (topics, formats, hashtags, seasonal events).
+11.  Social Media Manager compiles everything into the market research document using the standard template.
+12.  Team Lead reviews the document and adds strategic direction.
+13.  Team Lead approves and shares it internally and, if needed, with the client.
+Quality checkpoints
+Every section of the template is filled in.
+At least 3 competitors have been analysed.
+Personas are based on real signals, not guesses.
+The findings clearly lead to the recommendations.
+Output & hand-off
+Output:  One complete market research document (including competitor analysis). It is handed to the Branding & Guidelines stage and used to build the Content Calendar.
+Do's and don'ts
+Do:
+Base every recommendation on evidence.
+Keep competitor data current.
+Save the document in the shared brand folder.
+Don't:
+Do not copy a competitor's strategy - look for gaps instead.
+Do not skip the audience personas.
+Do not start branding before this is approved.

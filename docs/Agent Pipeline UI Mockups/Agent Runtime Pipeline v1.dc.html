@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0}
+a{color:#A78BFA}
+a:hover{color:#C4B5FD}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#262A31;border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</helmet>
+<div style="--bg:#0A0B0D;--surface:#14161A;--surface2:#1B1E24;--border:#262A31;--text:#E9EAEC;--text-dim:#9AA0A8;--text-faint:#5B6069;--accent:#8B5CF6;--accent-soft:rgba(139,92,246,0.14);--accent-text:#C4B5FD;--success:#34D399;--success-soft:rgba(52,211,153,0.12);--run:#FB923C;--run-soft:rgba(251,146,60,0.14);--core:#34D399;--font-ui:'Space Grotesk',system-ui,sans-serif;--font-mono:'Space Mono',ui-monospace,monospace;display:flex;height:100vh;background:var(--bg);color:var(--text);font-family:var(--font-ui);overflow:hidden;animation:fadeIn .5s ease">
+
+  <div style="width:296px;flex-shrink:0;height:100vh;overflow-y:auto;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;justify-content:space-between;padding:28px 20px">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;padding:0 8px 28px">
+        <div style="width:28px;height:28px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;color:#0A0B0D;font-size:14px;flex-shrink:0">A</div>
+        <div style="font-size:14px;font-weight:600;letter-spacing:.01em;line-height:1.3">AI Architect<br/><span style="color:var(--text-faint);font-weight:500;font-size:12px">Agent Run</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <sc-for list="{{ railItems }}" as="item" hint-placeholder-count="6">
+          <div style="{{ item.rowStyle }}" style-hover="{{ item.hoverStyle }}" onClick="{{ item.onClick }}">
+            <div style="display:flex;flex-direction:column;align-items:center">
+              <div style="{{ item.circleStyle }}">
+                <sc-if value="{{ item.isDone }}">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="#0A0B0D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </sc-if>
+                <sc-if value="{{ item.notDone }}">{{ item.n }}</sc-if>
+              </div>
+              <sc-if value="{{ item.showLine }}"><div style="{{ item.lineStyle }}"></div></sc-if>
+            </div>
+            <div style="padding-bottom:22px">
+              <div style="{{ item.textStyle }}">{{ item.title }}</div>
+              <div style="font-size:12px;color:var(--text-faint);margin-top:2px">{{ item.desc }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--surface2)">
+      <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint);letter-spacing:.06em;margin-bottom:8px">RUN PROFILE</div>
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0"><span style="color:var(--text-dim)">Trust</span><span style="color:var(--run)">untrusted input</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0"><span style="color:var(--text-dim)">Lifetime</span><span>TTL · session</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0"><span style="color:var(--text-dim)">Grant</span><span>session principal</span></div>
+    </div>
+  </div>
+
+  <div style="flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden">
+    <div style="height:64px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 40px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-family:var(--font-mono);font-size:12px;color:var(--run);border:1px solid rgba(251,146,60,.4);background:var(--run-soft);padding:3px 8px;border-radius:5px;letter-spacing:.04em">RUN KB</span>
+        <span style="font-size:13.5px;color:var(--text-dim);font-family:var(--font-mono)">run:01H8XJ4ZK2Q9F3M7QW1E5B</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-faint)">STEP {{ currentStepDisplay }} / 6</span>
+        <div style="width:140px;height:4px;border-radius:2px;background:var(--border);overflow:hidden">
+          <div style="{{ progressBarStyle }}"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1;overflow-y:auto">
+      <div style="max-width:860px;margin:0 auto;padding:48px 40px 40px">
+
+        <sc-if value="{{ isStep1 }}">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--run);letter-spacing:.08em;margin-bottom:10px;font-weight:700">STEP 1 / 6 · RUN INTAKE</div>
+          <h1 style="font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em">Upload &amp; task</h1>
+          <p style="font-size:15px;line-height:1.6;color:var(--text-dim);margin:0 0 32px;max-width:620px">Every run starts with the bridge relation written as one sentence — it fixes chunk granularity on both sides before any document is touched.</p>
+
+          <div style="margin-bottom:28px">
+            <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em;margin-bottom:10px">BRIDGE RELATION</div>
+            <div style="border:1px solid rgba(139,92,246,.35);background:var(--accent-soft);border-radius:10px;padding:18px 20px;font-size:15.5px;line-height:1.55;color:var(--text)">
+              For each <b style="color:var(--accent-text)">requirement statement</b> in the client BRD, find the <b style="color:var(--accent-text)">D365 capability</b> that satisfies it.
+            </div>
+          </div>
+
+          <div style="margin-bottom:28px">
+            <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em;margin-bottom:10px">RUN UPLOAD</div>
+            <div style="border:1.5px dashed var(--border);border-radius:12px;padding:18px 20px;display:flex;align-items:center;gap:14px;background:var(--surface)">
+              <div style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--run);background:var(--run-soft);border-radius:6px;padding:7px 9px;flex-shrink:0">PDF</div>
+              <div style="flex:1">
+                <div style="font-size:14.5px;font-weight:600">Contoso Retail — BRD v3.pdf</div>
+                <div style="font-size:12.5px;color:var(--text-faint);margin-top:3px;font-family:var(--font-mono)">46 pages · 2.1 MB · sha256:9f3a21e0c8b4…</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;color:var(--success);font-size:12.5px;font-weight:600;flex-shrink:0">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                hashed
+              </div>
+            </div>
+            <div style="font-size:12.5px;color:var(--text-faint);margin-top:8px">Content-hash checked (P6) — re-uploading this file mid-session costs nothing.</div>
+          </div>
+
+          <div>
+            <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em;margin-bottom:10px">RUN KB PROFILE</div>
+            <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden">
+              <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+                <tbody>
+                  <tr style="border-bottom:1px solid var(--border)"><td style="padding:11px 16px;color:var(--text-faint)">kb_id</td><td style="padding:11px 16px;font-family:var(--font-mono);text-align:right">run:01H8XJ4ZK2Q9F3M7QW1E5B</td></tr>
+                  <tr style="border-bottom:1px solid var(--border)"><td style="padding:11px 16px;color:var(--text-faint)">Role</td><td style="padding:11px 16px;text-align:right">query unit</td></tr>
+                  <tr style="border-bottom:1px solid var(--border)"><td style="padding:11px 16px;color:var(--text-faint)">Trust</td><td style="padding:11px 16px;text-align:right;color:var(--run)">untrusted input</td></tr>
+                  <tr style="border-bottom:1px solid var(--border)"><td style="padding:11px 16px;color:var(--text-faint)">Lifetime</td><td style="padding:11px 16px;text-align:right">TTL · dies with session</td></tr>
+                  <tr><td style="padding:11px 16px;color:var(--text-faint)">Grant</td><td style="padding:11px 16px;text-align:right">session principal only</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isStep2 }}">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--run);letter-spacing:.08em;margin-bottom:10px;font-weight:700">STEP 2 / 6 · RUN INGEST</div>
+          <h1 style="font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em">Ingest — constrained pipeline</h1>
+          <p style="font-size:15px;line-height:1.6;color:var(--text-dim);margin:0 0 28px;max-width:640px">The run profile trades completeness for speed: geometric reading order only, chunk ladder stops at L1, hard timeout. The target is an atomic claim, not a coherent passage.</p>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:30px">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-family:var(--font-mono);padding:7px 13px;border-radius:20px;background:var(--success-soft);color:var(--success);border:1px solid rgba(52,211,153,.3)">content hash ✓</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-family:var(--font-mono);padding:7px 13px;border-radius:20px;background:var(--success-soft);color:var(--success);border:1px solid rgba(52,211,153,.3)">stage 0 — geometric only</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-family:var(--font-mono);padding:7px 13px;border-radius:20px;background:var(--surface2);color:var(--text-faint);border:1px solid var(--border);text-decoration:line-through">vision reorder</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-family:var(--font-mono);padding:7px 13px;border-radius:20px;background:var(--success-soft);color:var(--success);border:1px solid rgba(52,211,153,.3)">chunk ladder — L1 only</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-family:var(--font-mono);padding:7px 13px;border-radius:20px;background:var(--surface2);color:var(--text-faint);border:1px solid var(--border);text-decoration:line-through">L2 / L3</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-family:var(--font-mono);padding:7px 13px;border-radius:20px;background:var(--success-soft);color:var(--success);border:1px solid rgba(52,211,153,.3)">hard timeout enforced</span>
+          </div>
+
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em">QUERY-UNIT CHUNKS — L1, ONE CLAIM EACH</div>
+            <div style="font-size:12px;color:var(--text-faint);font-family:var(--font-mono)">6 chunks · avg 24 tokens</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ runChunks }}" as="chunk" hint-placeholder-count="6">
+              <div style="display:flex;gap:14px;align-items:flex-start;border:1px solid var(--border);border-radius:10px;padding:13px 16px;background:var(--surface)">
+                <div style="font-family:var(--font-mono);font-size:12px;color:var(--run);font-weight:700;flex-shrink:0;width:62px">{{ chunk.id }}</div>
+                <div style="flex:1;font-size:13.5px;line-height:1.5">{{ chunk.text }}</div>
+                <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint);background:var(--surface2);padding:3px 8px;border-radius:5px;flex-shrink:0;white-space:nowrap">query unit</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isStep3 }}">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--run);letter-spacing:.08em;margin-bottom:10px;font-weight:700">STEP 3 / 6 · CALL SITE 1</div>
+          <h1 style="font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em">① Plan</h1>
+          <p style="font-size:15px;line-height:1.6;color:var(--text-dim);margin:0 0 28px;max-width:640px">Query in, a typed plan out — never prose. This call site chooses the retrieval topology, the largest thing it decides.</p>
+
+          <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em;margin-bottom:10px">RETRIEVALPLAN</div>
+          <pre style="font-family:var(--font-mono);font-size:13px;line-height:1.75;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;color:var(--text);overflow:auto;margin:0 0 30px;white-space:pre">RetrievalPlan {
+  sub_queries: 6,  <span style="color:var(--text-faint)">// one per requirement chunk</span>
+  filters: {"{"} doc_type: "capability_spec", source: "core:d365-capabilities@v7" {"}"},
+  edge_kinds: ["describes", "references"],
+  k_per_query: 5
+}</pre>
+
+          <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em;margin-bottom:10px">TOPOLOGY — CHOSEN AT THIS CALL SITE</div>
+          <div style="display:flex;gap:16px">
+            <div style="flex:1;border:1px solid var(--border);border-radius:12px;padding:18px;opacity:.5">
+              <div style="font-weight:700;margin-bottom:6px;font-size:15px">Union</div>
+              <div style="font-size:13px;color:var(--text-dim);line-height:1.5">Search both corpora, RRF fuse, answer. Cheap, one pass. Fits "what does this say about X".</div>
+              <div style="margin-top:14px;font-size:11px;font-family:var(--font-mono);color:var(--text-faint)">not selected</div>
+            </div>
+            <div style="flex:1;border:1.5px solid var(--accent);border-radius:12px;padding:18px;background:var(--accent-soft)">
+              <div style="font-weight:700;margin-bottom:6px;font-size:15px;color:var(--accent-text)">Bridge — selected</div>
+              <div style="font-size:13px;color:var(--text);line-height:1.5">Fan out: each run chunk becomes a query against Core only. Fits "map these requirements onto D365 capabilities".</div>
+              <div style="margin-top:14px;font-size:11px;font-family:var(--font-mono);color:var(--accent-text)">6 run chunks × k=5, against core:d365-capabilities@v7</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isStep4 }}">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--run);letter-spacing:.08em;margin-bottom:10px;font-weight:700">STEP 4 / 6 · BRIDGE RETRIEVAL</div>
+          <h1 style="font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em">Retrieve</h1>
+          <p style="font-size:15px;line-height:1.6;color:var(--text-dim);margin:0 0 28px;max-width:640px">Each run chunk fans out as its own query against Core only. Hybrid search, cross-encoder rerank, then graph hydration — grant re-checked per edge.</p>
+
+          <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em;margin-bottom:10px">EXAMPLE — ONE RUN CHUNK</div>
+          <div style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;background:var(--surface);margin-bottom:20px">
+            <div style="font-family:var(--font-mono);font-size:12px;color:var(--run);margin-bottom:5px;font-weight:700">REQ-014</div>
+            <div style="font-size:14px">System must support multi-currency pricing at the SKU level across all regional storefronts.</div>
+          </div>
+
+          <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em;margin-bottom:6px">MATCHED AGAINST CORE — HYBRID + RERANK</div>
+          <div>
+            <sc-for list="{{ matchedCapabilities }}" as="cap" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--border)">
+                <div style="flex:1">
+                  <div style="font-size:13.5px;font-weight:600">{{ cap.name }}</div>
+                  <div style="font-size:11.5px;color:var(--text-faint);font-family:var(--font-mono);margin-top:2px">{{ cap.doc }}</div>
+                </div>
+                <div style="width:100px;height:6px;border-radius:3px;background:var(--surface2);overflow:hidden;flex-shrink:0">
+                  <div style="height:100%;border-radius:3px;background:var(--core);width:{{ cap.score }}%"></div>
+                </div>
+                <div style="font-family:var(--font-mono);font-size:12.5px;color:var(--text-dim);width:30px;text-align:right;flex-shrink:0">.{{ cap.score }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="margin-top:24px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:13px;line-height:1.6;color:var(--text-dim)">
+            <b style="color:var(--text)">Hydration:</b> +2 edges followed — <span style="font-family:var(--font-mono);font-size:12px">describes</span> → Currency Conversion Service, <span style="font-family:var(--font-mono);font-size:12px">references</span> → Regional Tax Engine. Grant re-checked per edge.<br/>
+            <b style="color:var(--text)">Context assembly:</b> deduped by block_span, restored to document order, budget-packed.
+          </div>
+          <div style="margin-top:14px;font-size:13px;color:var(--text-faint)">5 more requirement chunks fan out identically against core:d365-capabilities@v7.</div>
+        </sc-if>
+
+        <sc-if value="{{ isStep5 }}">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--run);letter-spacing:.08em;margin-bottom:10px;font-weight:700">STEP 5 / 6 · CALL SITES 2 &amp; 3</div>
+          <h1 style="font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em">Generate</h1>
+          <p style="font-size:15px;line-height:1.6;color:var(--text-dim);margin:0 0 28px;max-width:640px">② Synthesize tags every claim with the chunk_id it came from. Verify is a deterministic lookup, not a judgment. ③ Repair fires once, only on rejection.</p>
+
+          <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em;margin-bottom:10px">REQ-014 — GROUNDED ON FIRST PASS</div>
+          <div style="border:1px solid var(--border);border-radius:10px;padding:16px;background:var(--surface);margin-bottom:26px">
+            <div style="font-size:14px;line-height:1.6">REQ-014 is satisfied by D365 Commerce's Regional Price Lists capability, which supports SKU-level pricing per channel and region. <span style="font-family:var(--font-mono);font-size:11px;color:var(--core);background:var(--success-soft);padding:2px 7px;border-radius:5px">chunk:core:8f2a1c9d</span></div>
+            <div style="margin-top:12px;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--success)">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              verified — resolves to D365 Commerce Capability Guide, p.43
+            </div>
+          </div>
+
+          <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em;margin-bottom:10px">REQ-017 — REJECTED, THEN REPAIRED</div>
+          <div style="border:1px solid rgba(248,113,113,.35);border-radius:10px;padding:16px;background:rgba(248,113,113,.08);margin-bottom:10px">
+            <div style="font-size:11px;font-family:var(--font-mono);color:var(--text-faint);margin-bottom:8px">ATTEMPT 1</div>
+            <div style="font-size:14px;line-height:1.6">REQ-017 is satisfied by the Warehouse Sync Dashboard. <span style="font-family:var(--font-mono);font-size:11px;color:#F87171;background:rgba(248,113,113,.14);padding:2px 7px;border-radius:5px">chunk:core:c9x102z</span></div>
+            <div style="margin-top:12px;display:flex;align-items:center;gap:6px;font-size:12.5px;color:#F87171">✕ rejected — chunk_id does not resolve in the assembled context</div>
+          </div>
+          <div style="text-align:center;font-size:12px;font-family:var(--font-mono);color:var(--text-faint);margin:10px 0">③ repair fires — evidence unchanged, single bounded retry</div>
+          <div style="border:1px solid var(--border);border-radius:10px;padding:16px;background:var(--surface);margin-bottom:24px">
+            <div style="font-size:11px;font-family:var(--font-mono);color:var(--text-faint);margin-bottom:8px">ATTEMPT 2</div>
+            <div style="font-size:14px;line-height:1.6">REQ-017 is satisfied by D365 Supply Chain's Real-time Inventory Visibility capability, which syncs warehouse and storefront state within the required latency window. <span style="font-family:var(--font-mono);font-size:11px;color:var(--core);background:var(--success-soft);padding:2px 7px;border-radius:5px">chunk:core:5a17be2</span></div>
+            <div style="margin-top:12px;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--success)">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              verified — resolves to D365 Supply Chain Admin Manual, p.71
+            </div>
+          </div>
+
+          <div style="font-size:13px;color:var(--text-faint);font-family:var(--font-mono)">call sites this run — plan ×1 · synthesize ×6 · repair ×1</div>
+        </sc-if>
+
+        <sc-if value="{{ isStep6 }}">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--run);letter-spacing:.08em;margin-bottom:10px;font-weight:700">STEP 6 / 6 · CITED OUTPUT</div>
+          <h1 style="font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em">Answer</h1>
+          <p style="font-size:15px;line-height:1.6;color:var(--text-dim);margin:0 0 28px;max-width:660px">The deliverable: a requirement → capability mapping, every row grounded to a page span — the thing a person would otherwise spend two days doing by hand.</p>
+
+          <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead>
+                <tr style="background:var(--surface)">
+                  <th style="text-align:left;padding:10px 14px;color:var(--text-faint);font-weight:600;font-size:11px;letter-spacing:.03em;border-bottom:1px solid var(--border)">REQ</th>
+                  <th style="text-align:left;padding:10px 14px;color:var(--text-faint);font-weight:600;font-size:11px;letter-spacing:.03em;border-bottom:1px solid var(--border)">Requirement</th>
+                  <th style="text-align:left;padding:10px 14px;color:var(--text-faint);font-weight:600;font-size:11px;letter-spacing:.03em;border-bottom:1px solid var(--border)">D365 capability</th>
+                  <th style="text-align:left;padding:10px 14px;color:var(--text-faint);font-weight:600;font-size:11px;letter-spacing:.03em;border-bottom:1px solid var(--border)">Citation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ mappingRows }}" as="row" hint-placeholder-count="6">
+                  <tr style="border-bottom:1px solid var(--border)">
+                    <td style="padding:12px 14px;font-family:var(--font-mono);font-size:12px;color:var(--run);white-space:nowrap">{{ row.id }}</td>
+                    <td style="padding:12px 14px;color:var(--text-dim)">{{ row.text }}</td>
+                    <td style="padding:12px 14px;font-weight:600;white-space:nowrap">{{ row.cap }}</td>
+                    <td style="padding:12px 14px;color:var(--text-faint);font-size:12px;white-space:nowrap">{{ row.doc }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="display:flex;gap:34px;margin-top:24px;padding-top:22px;border-top:1px solid var(--border)">
+            <div><div style="font-size:22px;font-weight:700;color:var(--success)">6/6</div><div style="font-size:12px;color:var(--text-faint);margin-top:2px">requirements grounded</div></div>
+            <div><div style="font-size:22px;font-weight:700">100%</div><div style="font-size:12px;color:var(--text-faint);margin-top:2px">citations resolve to a page span</div></div>
+            <div><div style="font-size:22px;font-weight:700">2.2</div><div style="font-size:12px;color:var(--text-faint);margin-top:2px">avg call sites per claim</div></div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+
+    <div style="flex-shrink:0;border-top:1px solid var(--border);padding:16px 40px;display:flex;align-items:center;justify-content:space-between">
+      <sc-if value="{{ isFirstStep }}"><div></div></sc-if>
+      <sc-if value="{{ notFirstStep }}">
+        <button onClick="{{ goBack }}" style="background:transparent;border:1px solid var(--border);color:var(--text-dim);font-family:var(--font-ui);font-size:14px;padding:10px 18px;border-radius:8px;cursor:pointer" style-hover="border-color:#5B6069;color:#E9EAEC">← Back</button>
+      </sc-if>
+      <div style="font-size:12.5px;color:var(--text-faint);font-family:var(--font-mono)">STEP {{ currentStepDisplay }} OF 6</div>
+      <sc-if value="{{ isLastStep }}">
+        <button onClick="{{ restart }}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-ui);font-size:14px;font-weight:600;padding:10px 20px;border-radius:8px;cursor:pointer" style-hover="border-color:#8B5CF6">↺ Start new run</button>
+      </sc-if>
+      <sc-if value="{{ notLastStep }}">
+        <button onClick="{{ goNext }}" style="background:var(--accent);border:none;color:#0A0B0D;font-family:var(--font-ui);font-size:14px;font-weight:700;padding:10px 22px;border-radius:8px;cursor:pointer" style-hover="opacity:0.88">Next →</button>
+      </sc-if>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { currentStep: 0, maxVisited: 0 };
+
+  steps = [
+    { title: 'Upload & Task', desc: 'Run intake' },
+    { title: 'Ingest', desc: 'Constrained pipeline' },
+    { title: 'Plan', desc: 'Call site 1' },
+    { title: 'Retrieve', desc: 'Bridge fan-out' },
+    { title: 'Generate', desc: 'Synthesize → Verify' },
+    { title: 'Answer', desc: 'Cited output' },
+  ];
+
+  runChunks = [
+    { id: 'REQ-014', text: 'System must support multi-currency pricing at the SKU level across all regional storefronts.' },
+    { id: 'REQ-015', text: 'Approval workflow for purchase orders over $50,000 must route to the regional finance director.' },
+    { id: 'REQ-016', text: 'Customer returns must be processible against the original sales order within 90 days.' },
+    { id: 'REQ-017', text: 'Inventory sync latency between warehouse and storefront must not exceed 5 minutes.' },
+    { id: 'REQ-018', text: 'Role-based access control is required for finance, procurement, and warehouse personas.' },
+    { id: 'REQ-019', text: 'An audit trail is required for all price overrides at point of sale.' },
+  ];
+
+  matchedCapabilities = [
+    { name: 'D365 Commerce — Regional Price Lists', doc: 'D365 Commerce Capability Guide · p.42–44', score: 91 },
+    { name: 'D365 Finance — Multicurrency Ledger Configuration', doc: 'D365 Finance Module Reference · p.88', score: 84 },
+    { name: 'D365 Commerce — Channel-level Currency Override', doc: 'D365 Commerce Capability Guide · p.51', score: 77 },
+  ];
+
+  mappingRows = [
+    { id: 'REQ-014', text: 'Multi-currency SKU pricing across storefronts', cap: 'Regional Price Lists', doc: 'Commerce Capability Guide, p.42–44' },
+    { id: 'REQ-015', text: 'PO approval routing over $50,000', cap: 'Approval Workflows (Procurement)', doc: 'Finance Module Reference, p.156' },
+    { id: 'REQ-016', text: 'Returns against original sales order, 90 days', cap: 'Returns & Exchanges', doc: 'Commerce Capability Guide, p.98' },
+    { id: 'REQ-017', text: 'Warehouse↔storefront sync ≤ 5 min', cap: 'Real-time Inventory Visibility', doc: 'Supply Chain Admin Manual, p.71' },
+    { id: 'REQ-018', text: 'RBAC — finance, procurement, warehouse', cap: 'Security Roles & Duty Segregation', doc: 'Finance Module Reference, p.203' },
+    { id: 'REQ-019', text: 'Audit trail for POS price overrides', cap: 'Price Override Audit Log', doc: 'Commerce Capability Guide, p.117' },
+  ];
+
+  goToStep = (i) => { if (i <= this.state.maxVisited) this.setState({ currentStep: i }); };
+  goNext = () => { const n = Math.min(this.state.currentStep + 1, this.steps.length - 1); this.setState((s) => ({ currentStep: n, maxVisited: Math.max(s.maxVisited, n) })); };
+  goBack = () => { this.setState((s) => ({ currentStep: Math.max(s.currentStep - 1, 0) })); };
+  restart = () => { this.setState({ currentStep: 0 }); };
+
+  renderVals() {
+    const { currentStep, maxVisited } = this.state;
+    const accentSolid = '#8B5CF6';
+    const border = '#262A31';
+    const railItems = this.steps.map((step, i) => {
+      const isDone = i < currentStep;
+      const isCurrent = i === currentStep;
+      const clickable = i <= maxVisited;
+      return {
+        n: i + 1,
+        title: step.title,
+        desc: step.desc,
+        isDone,
+        notDone: !isDone,
+        showLine: i < this.steps.length - 1,
+        circleStyle: {
+          width: 32, height: 32, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, flexShrink: 0,
+          background: isDone ? accentSolid : 'transparent',
+          color: isDone ? '#0A0B0D' : (isCurrent ? '#C4B5FD' : '#5B6069'),
+          border: isDone ? 'none' : `2px solid ${isCurrent ? accentSolid : border}`,
+        },
+        textStyle: { fontSize: 14, fontWeight: isCurrent ? 700 : 600, color: (isCurrent || isDone) ? '#E9EAEC' : '#5B6069' },
+        rowStyle: { display: 'flex', gap: 14, padding: '6px 8px', borderRadius: 10, cursor: clickable ? 'pointer' : 'default', alignItems: 'flex-start' },
+        hoverStyle: clickable ? { background: '#1B1E24' } : {},
+        lineStyle: { width: 2, flex: 1, minHeight: 20, margin: '4px 0', background: isDone ? accentSolid : border, borderRadius: 1 },
+        onClick: () => this.goToStep(i),
+      };
+    });
+    const pct = (currentStep / (this.steps.length - 1)) * 100;
+    return {
+      railItems,
+      isStep1: currentStep === 0, isStep2: currentStep === 1, isStep3: currentStep === 2,
+      isStep4: currentStep === 3, isStep5: currentStep === 4, isStep6: currentStep === 5,
+      isFirstStep: currentStep === 0, notFirstStep: currentStep !== 0,
+      isLastStep: currentStep === this.steps.length - 1, notLastStep: currentStep !== this.steps.length - 1,
+      currentStepDisplay: currentStep + 1,
+      progressBarStyle: { width: pct + '%', height: '100%', background: accentSolid, borderRadius: 2 },
+      goBack: this.goBack, goNext: this.goNext, restart: this.restart,
+      runChunks: this.runChunks, matchedCapabilities: this.matchedCapabilities, mappingRows: this.mappingRows,
+    };
+  }
+}
+</script>
+</body>
+</html>

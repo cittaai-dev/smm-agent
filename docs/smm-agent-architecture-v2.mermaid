@@ -1,0 +1,140 @@
+flowchart TB
+
+%% ═══════════════════════════════════════════════════════════
+%% REAL WORLD
+%% ═══════════════════════════════════════════════════════════
+    subgraph WORLD["REAL WORLD - live, external, ground truth"]
+        direction LR
+        W1["Brand site &<br/>owned channels"]
+        W2["Competitor channels<br/>& market sources"]
+        W3["Platform APIs<br/>IG - LinkedIn - YouTube - X - FB"]
+        W4["Analytics exports<br/>insights, engagement, audience"]
+    end
+
+%% ═══════════════════════════════════════════════════════════
+%% TOOL LAYER
+%% ═══════════════════════════════════════════════════════════
+    subgraph TOOLS["TOOL LAYER - typed tools - explicit failure mode - no bare model calls to the world"]
+        direction LR
+        T1["Platform API tools<br/>read - publish - schedule"]
+        T2["Web tools<br/>fetch & crawl"]
+        T3["Analytics tools<br/>exports, breakdowns"]
+        T4["Storage tools<br/>doc store - asset store"]
+    end
+
+    W1 --> T2
+    W2 --> T2
+    W3 --> T1
+    W4 --> T3
+
+%% ═══════════════════════════════════════════════════════════
+%% PLANE 1 - INGEST
+%% ═══════════════════════════════════════════════════════════
+    subgraph P1["PLANE 1 - INGEST - sources in, typed chunks out"]
+        I1["classify to parser tier to chunk router<br/>to C1-C8 validators to embed + store<br/>degrade, never fail"]
+    end
+
+    T1 --> I1
+    T2 --> I1
+    T3 --> I1
+    T4 --> I1
+
+%% ═══════════════════════════════════════════════════════════
+%% TWO MEMORIES
+%% ═══════════════════════════════════════════════════════════
+    subgraph MEM["TWO MEMORIES - kb_id on every chunk, edge, retrieval"]
+        direction LR
+        BW["BRAND WORKSPACE<br/>query unit - one brand<br/>unverified - refreshed per cycle"]
+        GATE1{{"EVAL GATE<br/>coverage - dedup -<br/>citation resolution"}}
+        CORE["MARKET INTEL CORE<br/>evidence unit - shared, all brands<br/>curated - permanent, versioned"]
+        BW -- "human-gated<br/>promotion only" --> GATE1
+        GATE1 -- pass --> CORE
+        GATE1 -. "fail, version<br/>untouched" .-> BW
+    end
+
+    I1 --> BW
+    I1 -. "curated sources only" .-> CORE
+
+%% ═══════════════════════════════════════════════════════════
+%% PLANE 2 - RETRIEVE
+%% ═══════════════════════════════════════════════════════════
+    subgraph P2["PLANE 2 - RETRIEVE - query in, evidence out"]
+        R1["Plan to hybrid search to rerank<br/>to graph hydration to budget-packed context<br/>topology: union or bridge"]
+    end
+
+    BW --> R1
+    CORE --> R1
+
+%% ═══════════════════════════════════════════════════════════
+%% PLANE 3 - GENERATE
+%% ═══════════════════════════════════════════════════════════
+    subgraph P3["PLANE 3 - GENERATE - evidence in, cited claims out - 3 call sites only"]
+        direction LR
+        G1["Plan"]
+        G2["Synthesize<br/>claim tagged<br/>with chunk_id"]
+        G3{{"Verify<br/>deterministic lookup"}}
+        G4["Repair<br/>fires once"]
+        G1 --> G2 --> G3
+        G3 -- rejected --> G4 --> G3
+    end
+
+    R1 --> G1
+
+%% ═══════════════════════════════════════════════════════════
+%% PLANE 4 - DELIVER
+%% ═══════════════════════════════════════════════════════════
+    subgraph P4["PLANE 4 - DELIVER - claims in, template-shaped document out"]
+        D1["SOP cycle<br/>01 Research to 02 Branding to 03 Calendar<br/>to 04 Production to 05 Publishing to 06 Reporting"]
+    end
+
+    G3 -- grounded --> D1
+
+%% ═══════════════════════════════════════════════════════════
+%% HUMAN APPROVAL GATE
+%% ═══════════════════════════════════════════════════════════
+    GATE2{{"TEAM LEAD APPROVAL<br/>required before publish, spend, or client reach"}}
+
+    D1 --> GATE2
+    GATE2 -- approved --> T1
+    GATE2 -- approved --> T4
+    GATE2 -. "rejected, gap<br/>named in doc" .-> D1
+
+%% ═══════════════════════════════════════════════════════════
+%% THE CYCLE
+%% ═══════════════════════════════════════════════════════════
+    T3 -. "next cycle's<br/>research input" .-> D1
+
+%% ═══════════════════════════════════════════════════════════
+%% STYLES - explicit fill + stroke + text color on every class, no inherited color
+%% ═══════════════════════════════════════════════════════════
+    classDef world     fill:#f1f5f9,stroke:#475569,color:#1e293b,stroke-width:1.5px
+    classDef tool       fill:#f5f3ff,stroke:#7c3aed,color:#4c1d95,stroke-width:1.5px
+    classDef ingest     fill:#f0fdf4,stroke:#16a34a,color:#14532d,stroke-width:1.5px
+    classDef brand      fill:#fff7ed,stroke:#ea580c,color:#7c2d12,stroke-width:1.5px
+    classDef core       fill:#f0fdf4,stroke:#16a34a,color:#14532d,stroke-width:1.5px
+    classDef gate       fill:#fef9c3,stroke:#ca8a04,color:#713f12,stroke-width:2px
+    classDef retrieve   fill:#eff6ff,stroke:#2563eb,color:#1e3a8a,stroke-width:1.5px
+    classDef generate   fill:#fef2f2,stroke:#dc2626,color:#7f1d1d,stroke-width:1.5px
+    classDef verify     fill:#fee2e2,stroke:#dc2626,color:#7f1d1d,stroke-width:2px
+    classDef deliver    fill:#eef2ff,stroke:#4f46e5,color:#312e81,stroke-width:1.5px
+    classDef approval   fill:#fee2e2,stroke:#dc2626,color:#7f1d1d,stroke-width:3px
+
+    class W1,W2,W3,W4 world
+    class T1,T2,T3,T4 tool
+    class I1 ingest
+    class BW brand
+    class CORE core
+    class GATE1 gate
+    class R1 retrieve
+    class G1,G2,G4 generate
+    class G3 verify
+    class D1 deliver
+    class GATE2 approval
+
+    style WORLD fill:#ffffff,stroke:#475569,stroke-width:2px,color:#1e293b
+    style TOOLS fill:#ffffff,stroke:#7c3aed,stroke-width:2px,color:#4c1d95
+    style P1    fill:#ffffff,stroke:#16a34a,stroke-width:2px,color:#14532d
+    style MEM   fill:#ffffff,stroke:#ea580c,stroke-width:2px,color:#7c2d12
+    style P2    fill:#ffffff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
+    style P3    fill:#ffffff,stroke:#dc2626,stroke-width:2px,color:#7f1d1d
+    style P4    fill:#ffffff,stroke:#4f46e5,stroke-width:2px,color:#312e81

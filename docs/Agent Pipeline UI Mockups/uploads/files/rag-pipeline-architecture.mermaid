@@ -1,0 +1,192 @@
+flowchart TB
+
+%% ═══════════════════════════════════════════════════════════
+%% PLANE 0 — CONTRACTS
+%% ═══════════════════════════════════════════════════════════
+    subgraph P0["PLANE 0 — CONTRACTS · the only things that cross a stage boundary"]
+        direction LR
+        K1["Block IR<br/>type, text, bbox, page,<br/>parser_confidence"]
+        K2["Chunk record<br/>content-addressed id,<br/>heading_path, block_span,<br/>order_confidence, kb_id"]
+        K3["Edge<br/>src, dst, kind,<br/>confidence, kb_id"]
+        K4["Grant<br/>principal to kb_id,<br/>postgres role level"]
+    end
+
+%% ═══════════════════════════════════════════════════════════
+%% PLANE 1 — INGEST
+%% ═══════════════════════════════════════════════════════════
+    subgraph P1["PLANE 1 — INGEST · offline · budgeted · content-addressed · never on the latency path"]
+        direction TB
+
+        SRC["SOURCES<br/>pdf · docx · images · html · text · free text<br/>50+ page files flagged for MCP tool path"]
+
+        subgraph DU["DOCUMENT UNDERSTANDING"]
+            DU1["classify format, layout, density<br/>route to parser — not by file extension"]
+        end
+
+        subgraph PARSE["PARSER LADDER — parsers.md"]
+            direction LR
+            PA["Base"]
+            PB["Structural"]
+            PC["Semantic"]
+            PD["Intelligent"]
+        end
+
+        BLOCKS["TYPED BLOCKS<br/>heading · paragraph · list · quote<br/>table md+desc · image vision-desc · code<br/>equation · caption · footnote · kv · toc · unknown"]
+
+        subgraph ORD["STAGE 0 — READING ORDER · page scoped"]
+            direction LR
+            OR1["geometric<br/>gutters + bands"]
+            OR2["continuity probe<br/>hyphen + run-on"]
+            OR3["vision reorder<br/>budgeted"]
+            OR1 --> OR2
+            OR2 -->|"below 0.85"| OR3
+            OR3 --> OR2
+        end
+
+        PREP["PRE-PASS · deterministic<br/>heading path · glue captions · lift footnotes<br/>drop toc · extract reference candidates · group BlockRun"]
+
+        CROUTE["CHUNK ROUTER · pure function<br/>type · tokens · heading density · xref density<br/>nesting · parser_confidence · order_confidence"]
+
+        subgraph CLAD["CHUNK LADDER — chunking.md"]
+            direction LR
+            C0["L0 fixed<br/>floor"]
+            C1L["L1 structural<br/>DEFAULT"]
+            C2L["L2 semantic<br/>z-score troughs"]
+            C3L["L3 intelligent<br/>LLM spans"]
+        end
+
+        ASM["ASSEMBLER<br/>context header · repeat stems · merge orphans<br/>chunk_id = sha256 of doc, span, shard, version"]
+
+        VAL["VALIDATOR — C1 to C8<br/>atomicity · heading path · total order · monotonic escalation<br/>determinism · degrade-not-fail · order stamped · edge confinement"]
+
+        EMB["EMBED<br/>dense vector + sparse tsvector"]
+
+        SRC --> DU --> PARSE --> BLOCKS --> ORD --> PREP --> CROUTE --> CLAD --> ASM --> VAL
+        VAL -->|fail| CROUTE
+        VAL -->|pass| EMB
+    end
+
+%% ═══════════════════════════════════════════════════════════
+%% STORE
+%% ═══════════════════════════════════════════════════════════
+    subgraph STORE["STORE — postgres · one database, four surfaces"]
+        direction LR
+        D1[("pgvector<br/>dense")]
+        D2[("chunks<br/>text · tsvector · heading_path<br/>block_span · metadata")]
+        D3[("chunk_edges<br/>kb scoped")]
+        D4[("pending_references<br/>+ document_registry")]
+    end
+
+    EMB --> STORE
+
+    subgraph RES["REFERENCE RESOLVER · async · retroactive"]
+        direction LR
+        RR1["R1 exact key"]
+        RR2["R2 alias + title similarity"]
+        RR3["R3 LLM disambiguation<br/>near ties only"]
+        RR4["C8 gate<br/>cross-KB refs never minted"]
+        RR1 -->|miss| RR2 -->|"near ties"| RR3
+        RR1 --> RR4
+        RR2 --> RR4
+        RR3 --> RR4
+    end
+
+    STORE -.new document lands.-> RES
+    RES -.edges.-> STORE
+
+%% ═══════════════════════════════════════════════════════════
+%% PLANE 2 — RETRIEVE
+%% ═══════════════════════════════════════════════════════════
+    subgraph P2["PLANE 2 — RETRIEVE · hot path"]
+        direction TB
+
+        Q["QUERY"]
+
+        GRANT["GRANT RESOLUTION — P3<br/>principal to kb_id set, at the postgres role<br/>scope is applied BEFORE search, never filtered after"]
+
+        PLAN["① PLAN — LLM CALL SITE 1<br/>decompose into sub-queries<br/>extract structural filters: doc type, date, section<br/>emit a typed RetrievalPlan, not prose"]
+
+        subgraph HYB["HYBRID SEARCH · per sub-query"]
+            direction LR
+            H1["dense<br/>pgvector cosine"]
+            H2["sparse<br/>BM25 tsvector"]
+            H3["RRF fusion"]
+            H1 --> H3
+            H2 --> H3
+        end
+
+        RANK["CROSS-ENCODER RERANK<br/>not a generative call site<br/>deterministic, cacheable"]
+
+        HYD["GRAPH HYDRATION<br/>follows · continues · describes · references<br/>depth capped, visited set<br/>grant RE-CHECKED per edge — C8"]
+
+        CTX["CONTEXT ASSEMBLY<br/>dedupe by block_span overlap — exact, not fuzzy<br/>restore document order by doc, block_index<br/>budget-pack, drop lowest-scoring tail"]
+
+        Q --> GRANT --> PLAN --> HYB --> RANK --> HYD --> CTX
+    end
+
+    STORE --> HYB
+    STORE --> HYD
+
+%% ═══════════════════════════════════════════════════════════
+%% PLANE 3 — GENERATE
+%% ═══════════════════════════════════════════════════════════
+    subgraph P3G["PLANE 3 — GENERATE · hot path"]
+        direction TB
+
+        SYN["② SYNTHESIZE — LLM CALL SITE 2<br/>grounded answer<br/>every claim tagged with a chunk_id"]
+
+        VER["VERIFY — DETERMINISTIC, NO MODEL — P4<br/>claim to chunk_id to block_span to page span<br/>unresolvable or uncited claim = rejected claim"]
+
+        REP["③ REPAIR — LLM CALL SITE 3<br/>fires only on rejection<br/>failing claims marked, single bounded retry"]
+
+        OUT["ANSWER + CITATIONS<br/>each citation resolves to a page span<br/>in the original file"]
+
+        FLOOR["INSUFFICIENT GROUNDING<br/>return evidence, not an ungrounded answer — P5"]
+
+        SYN --> VER
+        VER -->|all claims grounded| OUT
+        VER -->|rejected| REP
+        REP --> VER
+        VER -->|"rejected twice"| FLOOR
+    end
+
+    CTX --> SYN
+
+%% ═══════════════════════════════════════════════════════════
+%% PLANE 4 — OBSERVE
+%% ═══════════════════════════════════════════════════════════
+    subgraph P4["PLANE 4 — OBSERVE · cross-cutting · OTel gen_ai.* spans"]
+        direction LR
+        M1["L0 routing ratio<br/>health of parse + order"]
+        M2["degraded chunk ratio"]
+        M3["order_confidence<br/>distribution"]
+        M4["citation rejection rate<br/>per doc type"]
+        M5["hydration depth<br/>and edge kind mix"]
+        M6["cost per call site<br/>redis semantic cache hit rate"]
+    end
+
+    P1 -.spans.-> P4
+    P2 -.spans.-> P4
+    P3G -.spans.-> P4
+    P4 -.M1 and M4 drive re-ingest and z recalibration.-> P1
+
+%% ═══════════════════════════════════════════════════════════
+    P0 -.governs every boundary.-> P1
+
+    style P0 fill:#f8fafc,stroke:#334155,stroke-width:2px
+    style P1 fill:#f0fdf4,stroke:#16a34a,stroke-width:2px
+    style P2 fill:#eff6ff,stroke:#2563eb,stroke-width:2px
+    style P3G fill:#fef2f2,stroke:#dc2626,stroke-width:2px
+    style P4 fill:#faf5ff,stroke:#7c3aed,stroke-width:2px
+    style STORE fill:#f1f5f9,stroke:#475569,stroke-width:2px
+    style RES fill:#e0f2fe,stroke:#0284c7
+    style ORD fill:#fce7f3,stroke:#db2777
+    style CLAD fill:#dcfce7,stroke:#16a34a
+    style PARSE fill:#dcfce7,stroke:#16a34a
+    style VAL fill:#fee2e2,stroke:#dc2626
+    style PLAN fill:#fef9c3,stroke:#ca8a04,stroke-width:2px
+    style SYN fill:#fef9c3,stroke:#ca8a04,stroke-width:2px
+    style REP fill:#fef9c3,stroke:#ca8a04,stroke-width:2px
+    style VER fill:#fee2e2,stroke:#dc2626,stroke-width:2px
+    style GRANT fill:#fee2e2,stroke:#dc2626,stroke-width:2px
+    style FLOOR fill:#f1f5f9,stroke:#475569

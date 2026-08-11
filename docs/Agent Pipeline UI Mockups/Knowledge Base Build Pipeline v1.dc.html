@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0}
+a{color:#A78BFA}
+a:hover{color:#C4B5FD}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#262A31;border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</helmet>
+<div style="--bg:#0A0B0D;--surface:#14161A;--surface2:#1B1E24;--border:#262A31;--text:#E9EAEC;--text-dim:#9AA0A8;--text-faint:#5B6069;--accent:#8B5CF6;--accent-soft:rgba(139,92,246,0.14);--accent-text:#C4B5FD;--success:#34D399;--success-soft:rgba(52,211,153,0.12);--core:#34D399;--core-soft:rgba(52,211,153,0.14);--warning:#FBBF24;--warning-soft:rgba(251,191,36,0.12);--font-ui:'Space Grotesk',system-ui,sans-serif;--font-mono:'Space Mono',ui-monospace,monospace;display:flex;height:100vh;background:var(--bg);color:var(--text);font-family:var(--font-ui);overflow:hidden;animation:fadeIn .5s ease">
+
+  <div style="width:296px;flex-shrink:0;height:100vh;overflow-y:auto;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;justify-content:space-between;padding:28px 20px">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;padding:0 8px 28px">
+        <div style="width:28px;height:28px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;color:#0A0B0D;font-size:14px;flex-shrink:0">C</div>
+        <div style="font-size:14px;font-weight:600;letter-spacing:.01em;line-height:1.3">Core Builder<br/><span style="color:var(--text-faint);font-weight:500;font-size:12px">KB Build</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <sc-for list="{{ railItems }}" as="item" hint-placeholder-count="7">
+          <div style="{{ item.rowStyle }}" style-hover="{{ item.hoverStyle }}" onClick="{{ item.onClick }}">
+            <div style="display:flex;flex-direction:column;align-items:center">
+              <div style="{{ item.circleStyle }}">
+                <sc-if value="{{ item.isDone }}">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="#0A0B0D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </sc-if>
+                <sc-if value="{{ item.notDone }}">{{ item.n }}</sc-if>
+              </div>
+              <sc-if value="{{ item.showLine }}"><div style="{{ item.lineStyle }}"></div></sc-if>
+            </div>
+            <div style="padding-bottom:18px">
+              <div style="{{ item.textStyle }}">{{ item.title }}</div>
+              <div style="font-size:11.5px;color:var(--text-faint);margin-top:2px">{{ item.desc }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--surface2)">
+      <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint);letter-spacing:.06em;margin-bottom:8px">CORE PROFILE</div>
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0"><span style="color:var(--text-dim)">Trust</span><span style="color:var(--core)">curated</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0"><span style="color:var(--text-dim)">Lifetime</span><span>permanent · versioned</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0"><span style="color:var(--text-dim)">Grant</span><span>org / KB grant</span></div>
+    </div>
+  </div>
+
+  <div style="flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden">
+    <div style="height:64px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 40px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-family:var(--font-mono);font-size:12px;color:var(--core);border:1px solid rgba(52,211,153,.4);background:var(--core-soft);padding:3px 8px;border-radius:5px;letter-spacing:.04em">CORE KB</span>
+        <span style="font-size:13.5px;color:var(--text-dim);font-family:var(--font-mono)">core:d365-capabilities@v7</span>
+        <sc-if value="{{ notLastStep }}"><span style="font-size:11px;font-family:var(--font-mono);color:var(--text-faint);background:var(--surface2);padding:3px 8px;border-radius:5px">staging</span></sc-if>
+        <sc-if value="{{ isLastStep }}"><span style="font-size:11px;font-family:var(--font-mono);color:var(--core);background:var(--core-soft);padding:3px 8px;border-radius:5px">promoted</span></sc-if>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-faint)">STEP {{ currentStepDisplay }} / 7</span>
+        <div style="width:140px;height:4px;border-radius:2px;background:var(--border);overflow:hidden">
+          <div style="{{ progressBarStyle }}"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1;overflow-y:auto">
+      <div style="max-width:880px;margin:0 auto;padding:48px 40px 40px">
+
+        <sc-if value="{{ isStep1 }}">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--core);letter-spacing:.08em;margin-bottom:10px;font-weight:700">STEP 1 / 7 · SOURCE INTAKE</div>
+          <h1 style="font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em">Source intake</h1>
+          <p style="font-size:15px;line-height:1.6;color:var(--text-dim);margin:0 0 28px;max-width:640px">Curated sources land on a Service Bus queue and build offline, on a generous, amortized budget — a backlog here must never slow a user's run.</p>
+
+          <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em;margin-bottom:10px">QUEUED SOURCES</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
+            <sc-for list="{{ queuedDocs }}" as="doc" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:14px;border:1.5px dashed var(--border);border-radius:12px;padding:14px 16px;background:var(--surface)">
+                <div style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--core);background:var(--core-soft);border-radius:6px;padding:7px 9px;flex-shrink:0">{{ doc.ext }}</div>
+                <div style="flex:1">
+                  <div style="font-size:14.5px;font-weight:600">{{ doc.name }}</div>
+                  <div style="font-size:12.5px;color:var(--text-faint);margin-top:3px;font-family:var(--font-mono)">{{ doc.pages }} pages</div>
+                </div>
+                <div style="font-size:11.5px;font-family:var(--font-mono);color:var(--text-faint);background:var(--surface2);padding:4px 9px;border-radius:5px;flex-shrink:0">queued</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;gap:16px;margin-bottom:24px">
+            <div style="flex:1;border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+              <div style="font-size:11px;color:var(--text-faint);letter-spacing:.02em;margin-bottom:4px">TRIGGER</div>
+              <div style="font-size:14px;font-weight:600">Service Bus → KEDA</div>
+              <div style="font-size:12px;color:var(--text-dim);margin-top:2px">Container Apps job, scaled on queue depth</div>
+            </div>
+            <div style="flex:1;border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+              <div style="font-size:11px;color:var(--text-faint);letter-spacing:.02em;margin-bottom:4px">QUEUE DEPTH</div>
+              <div style="font-size:14px;font-weight:600">3 documents</div>
+              <div style="font-size:12px;color:var(--text-dim);margin-top:2px">740 pages combined</div>
+            </div>
+          </div>
+
+          <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em;margin-bottom:10px">CORE KB PROFILE</div>
+          <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden">
+            <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+              <tbody>
+                <tr style="border-bottom:1px solid var(--border)"><td style="padding:11px 16px;color:var(--text-faint)">kb_id</td><td style="padding:11px 16px;font-family:var(--font-mono);text-align:right">core:d365-capabilities@v7</td></tr>
+                <tr style="border-bottom:1px solid var(--border)"><td style="padding:11px 16px;color:var(--text-faint)">Role</td><td style="padding:11px 16px;text-align:right">evidence unit</td></tr>
+                <tr style="border-bottom:1px solid var(--border)"><td style="padding:11px 16px;color:var(--text-faint)">Trust</td><td style="padding:11px 16px;text-align:right;color:var(--core)">curated</td></tr>
+                <tr style="border-bottom:1px solid var(--border)"><td style="padding:11px 16px;color:var(--text-faint)">Lifetime</td><td style="padding:11px 16px;text-align:right">permanent, versioned</td></tr>
+                <tr><td style="padding:11px 16px;color:var(--text-faint)">Cost</td><td style="padding:11px 16px;text-align:right">amortized across all runs</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isStep2 }}">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--core);letter-spacing:.08em;margin-bottom:10px;font-weight:700">STEP 2 / 7 · DOCUMENT UNDERSTANDING</div>
+          <h1 style="font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em">Parse</h1>
+          <p style="font-size:15px;line-height:1.6;color:var(--text-dim);margin:0 0 28px;max-width:640px">Each source is classified by format, layout, and density, then routed to a parser tier — never by file extension.</p>
+
+          <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:26px">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead>
+                <tr style="background:var(--surface)">
+                  <th style="text-align:left;padding:10px 14px;color:var(--text-faint);font-weight:600;font-size:11px;letter-spacing:.03em;border-bottom:1px solid var(--border)">Source</th>
+                  <th style="text-align:left;padding:10px 14px;color:var(--text-faint);font-weight:600;font-size:11px;letter-spacing:.03em;border-bottom:1px solid var(--border)">Layout</th>
+                  <th style="text-align:left;padding:10px 14px;color:var(--text-faint);font-weight:600;font-size:11px;letter-spacing:.03em;border-bottom:1px solid var(--border)">Density</th>
+                  <th style="text-align:left;padding:10px 14px;color:var(--text-faint);font-weight:600;font-size:11px;letter-spacing:.03em;border-bottom:1px solid var(--border)">Parser tier</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ routingRows }}" as="doc" hint-placeholder-count="3">
+                  <tr style="border-bottom:1px solid var(--border)">
+                    <td style="padding:11px 14px;font-weight:600;white-space:nowrap">{{ doc.name }}</td>
+                    <td style="padding:11px 14px;color:var(--text-dim)">{{ doc.layout }}</td>
+                    <td style="padding:11px 14px;color:var(--text-dim)">{{ doc.density }}</td>
+                    <td style="padding:11px 14px;font-family:var(--font-mono);font-size:12px;color:var(--core)">{{ doc.tier }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em">TYPED BLOCKS EXTRACTED</div>
+            <div style="font-size:12px;color:var(--text-faint);font-family:var(--font-mono)">1,204 blocks total</div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ blockTypes }}" as="bt" hint-placeholder-count="13">
+              <span style="font-size:12px;font-family:var(--font-mono);padding:6px 11px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text-dim)">{{ bt.type }} <span style="color:var(--text-faint)">· {{ bt.count }}</span></span>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isStep3 }}">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--core);letter-spacing:.08em;margin-bottom:10px;font-weight:700">STEP 3 / 7 · STAGE 0</div>
+          <h1 style="font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em">Reading order</h1>
+          <p style="font-size:15px;line-height:1.6;color:var(--text-dim);margin:0 0 30px;max-width:640px">Page-scoped, and the Core profile runs all three tiers — the Run profile stops after the first.</p>
+
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:30px;flex-wrap:wrap">
+            <div style="flex:1;min-width:170px;border:1px solid var(--border);border-radius:10px;padding:14px 16px;background:var(--surface)">
+              <div style="font-size:13.5px;font-weight:600;margin-bottom:4px">Geometric</div>
+              <div style="font-size:12px;color:var(--text-dim)">gutters + bands</div>
+            </div>
+            <div style="font-family:var(--font-mono);color:var(--text-faint);flex-shrink:0">→</div>
+            <div style="flex:1;min-width:170px;border:1px solid var(--border);border-radius:10px;padding:14px 16px;background:var(--surface)">
+              <div style="font-size:13.5px;font-weight:600;margin-bottom:4px">Continuity probe</div>
+              <div style="font-size:12px;color:var(--text-dim)">hyphen + run-on checks</div>
+            </div>
+            <div style="font-family:var(--font-mono);color:var(--text-faint);flex-shrink:0;text-align:center;font-size:11px">below<br/>0.85 →</div>
+            <div style="flex:1;min-width:170px;border:1.5px solid var(--core);border-radius:10px;padding:14px 16px;background:var(--core-soft)">
+              <div style="font-size:13.5px;font-weight:600;margin-bottom:4px;color:var(--text)">Vision reorder</div>
+              <div style="font-size:12px;color:var(--text-dim)">budgeted · Core only ↺ re-probes</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:34px;padding-top:22px;border-top:1px solid var(--border)">
+            <div><div style="font-size:22px;font-weight:700">0.93</div><div style="font-size:12px;color:var(--text-faint);margin-top:2px">avg order_confidence</div></div>
+            <div><div style="font-size:22px;font-weight:700;color:var(--warning)">14 / 740</div><div style="font-size:12px;color:var(--text-faint);margin-top:2px">pages escalated to vision reorder</div></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isStep4 }}">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--core);letter-spacing:.08em;margin-bottom:10px;font-weight:700">STEP 4 / 7 · CHUNK ROUTER</div>
+          <h1 style="font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em">Chunk</h1>
+          <p style="font-size:15px;line-height:1.6;color:var(--text-dim);margin:0 0 26px;max-width:640px">A deterministic pre-pass, then a pure-function router places every block on the ladder. Core carries a high L3 budget — the Run profile never gets past L1.</p>
+
+          <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em;margin-bottom:10px">PRE-PASS — DETERMINISTIC</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px">
+            <span style="font-size:12.5px;padding:7px 13px;border-radius:20px;background:var(--success-soft);color:var(--success);border:1px solid rgba(52,211,153,.3)">heading path assigned ✓</span>
+            <span style="font-size:12.5px;padding:7px 13px;border-radius:20px;background:var(--success-soft);color:var(--success);border:1px solid rgba(52,211,153,.3)">captions glued ✓</span>
+            <span style="font-size:12.5px;padding:7px 13px;border-radius:20px;background:var(--success-soft);color:var(--success);border:1px solid rgba(52,211,153,.3)">footnotes lifted ✓</span>
+            <span style="font-size:12.5px;padding:7px 13px;border-radius:20px;background:var(--success-soft);color:var(--success);border:1px solid rgba(52,211,153,.3)">toc dropped ✓</span>
+            <span style="font-size:12.5px;padding:7px 13px;border-radius:20px;background:var(--success-soft);color:var(--success);border:1px solid rgba(52,211,153,.3)">reference candidates extracted ✓</span>
+            <span style="font-size:12.5px;padding:7px 13px;border-radius:20px;background:var(--success-soft);color:var(--success);border:1px solid rgba(52,211,153,.3)">BlockRuns grouped ✓</span>
+          </div>
+
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em">CHUNK LADDER — L0 TO L3</div>
+            <div style="font-size:12px;color:var(--text-faint);font-family:var(--font-mono)">2,140 chunks</div>
+          </div>
+          <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;margin-bottom:14px">
+            <sc-for list="{{ chunkLadder }}" as="rung" hint-placeholder-count="4">
+              <div style="height:100%;width:{{ rung.pct }}%;background:{{ rung.color }}"></div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <sc-for list="{{ chunkLadder }}" as="rung" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:10px;font-size:13px">
+                <div style="width:10px;height:10px;border-radius:2px;background:{{ rung.color }};flex-shrink:0"></div>
+                <div style="flex:1;font-weight:600">{{ rung.label }}</div>
+                <div style="color:var(--text-faint);font-family:var(--font-mono);font-size:12px">{{ rung.count }} · {{ rung.pct }}%</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isStep5 }}">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--core);letter-spacing:.08em;margin-bottom:10px;font-weight:700">STEP 5 / 7 · ASSEMBLER</div>
+          <h1 style="font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em">Assemble &amp; validate</h1>
+          <p style="font-size:15px;line-height:1.6;color:var(--text-dim);margin:0 0 26px;max-width:660px">The assembler adds context headers and merges orphans; <span style="font-family:var(--font-mono);font-size:13px;color:var(--text)">chunk_id = sha256(doc, span, shard, version)</span>. Every strategy is born already checked by C1–C8 before it ships.</p>
+
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+            <sc-for list="{{ validatorRules }}" as="rule" hint-placeholder-count="8">
+              <div style="{{ rule.cardStyle }}">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                  <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-faint)">{{ rule.code }}</span>
+                  <sc-if value="{{ rule.pass }}"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></sc-if>
+                  <sc-if value="{{ rule.retry }}"><span style="font-size:10px;font-family:var(--font-mono);color:var(--warning)">retry</span></sc-if>
+                </div>
+                <div style="font-size:12.5px;font-weight:600;line-height:1.3">{{ rule.name }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:14px;font-size:12.5px;color:var(--text-faint)">C4 failed monotonic escalation on one batch → routed back to the router → passed on retry.</div>
+        </sc-if>
+
+        <sc-if value="{{ isStep6 }}">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--core);letter-spacing:.08em;margin-bottom:10px;font-weight:700">STEP 6 / 7 · EMBED &amp; STORE</div>
+          <h1 style="font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em">Embed &amp; store</h1>
+          <p style="font-size:15px;line-height:1.6;color:var(--text-dim);margin:0 0 26px;max-width:640px">One database, four surfaces — no forked schema. The reference resolver re-sweeps pending references whenever a new document lands.</p>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px">
+            <sc-for list="{{ storeSurfaces }}" as="s" hint-placeholder-count="4">
+              <div style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;background:var(--surface)">
+                <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--core)">{{ s.name }}</div>
+                <div style="font-size:12px;color:var(--text-dim);margin-top:4px;line-height:1.4">{{ s.desc }}</div>
+                <div style="font-size:12px;color:var(--text-faint);margin-top:8px;font-family:var(--font-mono)">{{ s.count }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="font-size:12px;color:var(--text-faint);font-weight:600;letter-spacing:.02em;margin-bottom:10px">REFERENCE RESOLVER — ASYNC, RETROACTIVE</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+            <span style="font-size:12.5px;font-family:var(--font-mono);padding:7px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border)">R1 exact key</span>
+            <span style="color:var(--text-faint);font-size:12px">miss →</span>
+            <span style="font-size:12.5px;font-family:var(--font-mono);padding:7px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border)">R2 alias / title similarity</span>
+            <span style="color:var(--text-faint);font-size:12px">near ties →</span>
+            <span style="font-size:12.5px;font-family:var(--font-mono);padding:7px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border)">R3 LLM disambiguation</span>
+            <span style="color:var(--text-faint);font-size:12px">→</span>
+            <span style="font-size:12.5px;font-family:var(--font-mono);padding:7px 12px;border-radius:8px;background:var(--core-soft);border:1px solid rgba(52,211,153,.3);color:var(--core)">C8 gate</span>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:10px;padding:13px 16px;background:var(--surface);font-size:13px;color:var(--text-dim)">"see Finance §4.2" → resolved via R2 alias match → edge minted <span style="font-family:var(--font-mono);font-size:12px;color:var(--text)">core → core</span></div>
+        </sc-if>
+
+        <sc-if value="{{ isStep7 }}">
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--core);letter-spacing:.08em;margin-bottom:10px;font-weight:700">STEP 7 / 7 · EVAL GATE</div>
+          <h1 style="font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em">Eval gate &amp; promote</h1>
+          <p style="font-size:15px;line-height:1.6;color:var(--text-dim);margin:0 0 26px;max-width:660px">Failing the gate leaves the live version untouched. Passing promotes to an immutable version — never mutated in place.</p>
+
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:22px">
+            <sc-for list="{{ evalMetrics }}" as="m" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:14px;border:1px solid var(--border);border-radius:10px;padding:12px 16px;background:var(--surface)">
+                <div style="flex:1;font-size:13.5px;font-weight:600">{{ m.label }}</div>
+                <div style="font-family:var(--font-mono);font-size:13px">{{ m.value }}</div>
+                <div style="font-size:11.5px;color:var(--text-faint);font-family:var(--font-mono)">threshold {{ m.threshold }}</div>
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.7L13 4.5" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;border:1.5px solid var(--core);background:var(--core-soft);border-radius:12px;padding:18px 20px;margin-bottom:26px">
+            <div>
+              <div style="font-weight:700;font-size:16px;color:var(--text)">Gate passed — promoted</div>
+              <div style="font-size:13px;color:var(--text-dim);margin-top:3px">core:d365-capabilities <span style="font-family:var(--font-mono)">@v6 → @v7</span>, immutable</div>
+            </div>
+            <div style="display:flex;gap:6px;font-family:var(--font-mono);font-size:12px">
+              <span style="padding:5px 10px;border-radius:6px;background:var(--surface2);color:var(--text-faint)">v5</span>
+              <span style="padding:5px 10px;border-radius:6px;background:var(--surface2);color:var(--text-faint)">v6</span>
+              <span style="padding:5px 10px;border-radius:6px;background:var(--core);color:#0A0B0D;font-weight:700">v7</span>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:34px;padding-top:22px;border-top:1px solid var(--border)">
+            <div><div style="font-size:22px;font-weight:700">3 / 3</div><div style="font-size:12px;color:var(--text-faint);margin-top:2px">documents processed</div></div>
+            <div><div style="font-size:22px;font-weight:700">2,140</div><div style="font-size:12px;color:var(--text-faint);margin-top:2px">chunks stored</div></div>
+            <div><div style="font-size:22px;font-weight:700">34m</div><div style="font-size:12px;color:var(--text-faint);margin-top:2px">build duration</div></div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+
+    <div style="flex-shrink:0;border-top:1px solid var(--border);padding:16px 40px;display:flex;align-items:center;justify-content:space-between">
+      <sc-if value="{{ isFirstStep }}"><div></div></sc-if>
+      <sc-if value="{{ notFirstStep }}">
+        <button onClick="{{ goBack }}" style="background:transparent;border:1px solid var(--border);color:var(--text-dim);font-family:var(--font-ui);font-size:14px;padding:10px 18px;border-radius:8px;cursor:pointer" style-hover="border-color:#5B6069;color:#E9EAEC">← Back</button>
+      </sc-if>
+      <div style="font-size:12.5px;color:var(--text-faint);font-family:var(--font-mono)">STEP {{ currentStepDisplay }} OF 7</div>
+      <sc-if value="{{ isLastStep }}">
+        <button onClick="{{ restart }}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-ui);font-size:14px;font-weight:600;padding:10px 20px;border-radius:8px;cursor:pointer" style-hover="border-color:#34D399">↺ Start new build</button>
+      </sc-if>
+      <sc-if value="{{ notLastStep }}">
+        <button onClick="{{ goNext }}" style="background:var(--accent);border:none;color:#0A0B0D;font-family:var(--font-ui);font-size:14px;font-weight:700;padding:10px 22px;border-radius:8px;cursor:pointer" style-hover="opacity:0.88">Next →</button>
+      </sc-if>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { currentStep: 0, maxVisited: 0 };
+
+  steps = [
+    { title: 'Source Intake', desc: 'Queue & trigger' },
+    { title: 'Parse', desc: 'Doc understanding' },
+    { title: 'Reading Order', desc: 'Stage 0' },
+    { title: 'Chunk', desc: 'Router + L0–L3' },
+    { title: 'Assemble & Validate', desc: 'C1–C8' },
+    { title: 'Embed & Store', desc: 'Resolver' },
+    { title: 'Eval Gate & Promote', desc: 'Version' },
+  ];
+
+  queuedDocs = [
+    { name: 'D365 Commerce — Capability Guide.pdf', pages: 212, ext: 'PDF' },
+    { name: 'D365 Finance — Module Reference.docx', pages: 340, ext: 'DOC' },
+    { name: 'D365 Supply Chain — Admin Manual.pdf', pages: 188, ext: 'PDF' },
+  ];
+
+  routingRows = [
+    { name: 'D365 Commerce — Capability Guide.pdf', layout: 'multi-column', density: 'high', tier: 'Semantic' },
+    { name: 'D365 Finance — Module Reference.docx', layout: 'single-column', density: 'medium', tier: 'Structural' },
+    { name: 'D365 Supply Chain — Admin Manual.pdf', layout: 'tables + text', density: 'high', tier: 'Semantic' },
+  ];
+
+  blockTypes = [
+    { type: 'paragraph', count: 598 }, { type: 'list', count: 142 }, { type: 'heading', count: 94 },
+    { type: 'table', count: 84 }, { type: 'kv', count: 72 }, { type: 'image', count: 51 },
+    { type: 'unknown', count: 52 }, { type: 'caption', count: 44 }, { type: 'footnote', count: 39 },
+    { type: 'toc', count: 12 }, { type: 'code', count: 8 }, { type: 'quote', count: 5 }, { type: 'equation', count: 3 },
+  ];
+
+  chunkLadderBase = [
+    { label: 'L0 — fixed floor', pct: 4, count: 86, color: '#5B6069' },
+    { label: 'L1 — structural (default)', pct: 61, count: 1305, color: '#8B5CF6' },
+    { label: 'L2 — semantic (z-score troughs)', pct: 27, count: 578, color: '#34D399' },
+    { label: 'L3 — intelligent (LLM spans)', pct: 8, count: 171, color: '#FBBF24' },
+  ];
+
+  validatorBase = [
+    { code: 'C1', name: 'Atomicity', pass: true },
+    { code: 'C2', name: 'Heading path', pass: true },
+    { code: 'C3', name: 'Total order', pass: true },
+    { code: 'C4', name: 'Monotonic escalation', pass: false },
+    { code: 'C5', name: 'Determinism', pass: true },
+    { code: 'C6', name: 'Degrade-not-fail', pass: true },
+    { code: 'C7', name: 'Order stamped', pass: true },
+    { code: 'C8', name: 'Edge confinement', pass: true },
+  ];
+
+  storeSurfaces = [
+    { name: 'pgvector', desc: 'dense embeddings', count: '2,140 rows' },
+    { name: 'chunks', desc: 'text · tsvector · heading_path · block_span', count: '2,140 rows' },
+    { name: 'chunk_edges', desc: 'kb-scoped edges', count: '3,412 rows' },
+    { name: 'pending_references', desc: '+ document_registry', count: '47 pending' },
+  ];
+
+  evalMetrics = [
+    { label: 'L0 routing ratio', value: '4.0%', threshold: '< 10%' },
+    { label: 'Degraded chunk ratio', value: '1.8%', threshold: '< 5%' },
+    { label: 'Citation rejection — golden set', value: '3.2%', threshold: '< 8%' },
+  ];
+
+  goToStep = (i) => { if (i <= this.state.maxVisited) this.setState({ currentStep: i }); };
+  goNext = () => { const n = Math.min(this.state.currentStep + 1, this.steps.length - 1); this.setState((s) => ({ currentStep: n, maxVisited: Math.max(s.maxVisited, n) })); };
+  goBack = () => { this.setState((s) => ({ currentStep: Math.max(s.currentStep - 1, 0) })); };
+  restart = () => { this.setState({ currentStep: 0 }); };
+
+  renderVals() {
+    const { currentStep, maxVisited } = this.state;
+    const accentSolid = '#8B5CF6';
+    const border = '#262A31';
+    const railItems = this.steps.map((step, i) => {
+      const isDone = i < currentStep;
+      const isCurrent = i === currentStep;
+      const clickable = i <= maxVisited;
+      return {
+        n: i + 1,
+        title: step.title,
+        desc: step.desc,
+        isDone,
+        notDone: !isDone,
+        showLine: i < this.steps.length - 1,
+        circleStyle: {
+          width: 30, height: 30, borderRadius: 15, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 700, flexShrink: 0,
+          background: isDone ? accentSolid : 'transparent',
+          color: isDone ? '#0A0B0D' : (isCurrent ? '#C4B5FD' : '#5B6069'),
+          border: isDone ? 'none' : `2px solid ${isCurrent ? accentSolid : border}`,
+        },
+        textStyle: { fontSize: 13.5, fontWeight: isCurrent ? 700 : 600, color: (isCurrent || isDone) ? '#E9EAEC' : '#5B6069' },
+        rowStyle: { display: 'flex', gap: 14, padding: '5px 8px', borderRadius: 10, cursor: clickable ? 'pointer' : 'default', alignItems: 'flex-start' },
+        hoverStyle: clickable ? { background: '#1B1E24' } : {},
+        lineStyle: { width: 2, flex: 1, minHeight: 16, margin: '4px 0', background: isDone ? accentSolid : border, borderRadius: 1 },
+        onClick: () => this.goToStep(i),
+      };
+    });
+    const pct = (currentStep / (this.steps.length - 1)) * 100;
+    const chunkLadder = this.chunkLadderBase;
+    const validatorRules = this.validatorBase.map((r) => ({
+      code: r.code, name: r.name, pass: r.pass, retry: !r.pass,
+      cardStyle: {
+        border: `1px solid ${r.pass ? '#262A31' : 'rgba(251,191,36,.4)'}`,
+        background: r.pass ? '#14161A' : 'rgba(251,191,36,.08)',
+        borderRadius: 10, padding: '10px 12px',
+      },
+    }));
+    return {
+      railItems,
+      isStep1: currentStep === 0, isStep2: currentStep === 1, isStep3: currentStep === 2,
+      isStep4: currentStep === 3, isStep5: currentStep === 4, isStep6: currentStep === 5, isStep7: currentStep === 6,
+      isFirstStep: currentStep === 0, notFirstStep: currentStep !== 0,
+      isLastStep: currentStep === this.steps.length - 1, notLastStep: currentStep !== this.steps.length - 1,
+      currentStepDisplay: currentStep + 1,
+      progressBarStyle: { width: pct + '%', height: '100%', background: accentSolid, borderRadius: 2 },
+      goBack: this.goBack, goNext: this.goNext, restart: this.restart,
+      queuedDocs: this.queuedDocs, routingRows: this.routingRows, blockTypes: this.blockTypes,
+      chunkLadder, validatorRules, storeSurfaces: this.storeSurfaces, evalMetrics: this.evalMetrics,
+    };
+  }
+}
+</script>
+</body>
+</html>
