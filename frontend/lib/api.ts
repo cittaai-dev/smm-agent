@@ -2,6 +2,8 @@ import type {
   ApprovalChoice,
   ApprovalGateRecord,
   DistributionRecord,
+  EvalGateResult,
+  KBVersion,
   MarketResearchDocument,
   QualityCheckpoint,
   SourceFile,
@@ -146,4 +148,60 @@ export function distributeDocument(
 
 export function getDistribution(documentId: string): Promise<DistributionRecord | null> {
   return request<DistributionRecord | null>(`/documents/${encodeURIComponent(documentId)}/distribution`);
+}
+
+// Step 4: Market Intel Core console -- all requests need the api-key header
+// (api/deps.py's current_user), unlike the brand-workflow endpoints above
+// which don't enforce auth yet (Step 4's gate lands as a separate PR).
+function withApiKey(apiKey: string, init?: RequestInit): RequestInit {
+  return { ...init, headers: { ...(init?.headers ?? {}), "api-key": apiKey } };
+}
+
+export function triggerStagingBuild(
+  apiKey: string,
+  sourcePaths: string[],
+  targetVersion: number,
+): Promise<{ status: string; target_version: number }> {
+  return request(
+    "/core/staging/build",
+    withApiKey(apiKey, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source_paths: sourcePaths, target_version: targetVersion }),
+    }),
+  );
+}
+
+export function listCoreVersions(): Promise<KBVersion[]> {
+  return request<KBVersion[]>("/core/versions");
+}
+
+export function createPromotionRequest(
+  apiKey: string,
+  version: number,
+  sourceSummary: string,
+): Promise<{ request_id: string; kb_id: string; status: string; eval_result: EvalGateResult }> {
+  return request(
+    `/core/staging/${version}/promotion-requests`,
+    withApiKey(apiKey, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source_summary: sourceSummary }),
+    }),
+  );
+}
+
+export function decidePromotion(
+  apiKey: string,
+  requestId: string,
+  decision: ApprovalChoice,
+): Promise<{ request_id: string; decision: ApprovalChoice; kb_id?: string }> {
+  return request(
+    `/core/promotion-requests/${encodeURIComponent(requestId)}/decide`,
+    withApiKey(apiKey, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision }),
+    }),
+  );
 }

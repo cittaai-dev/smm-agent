@@ -49,7 +49,51 @@ class RerankSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SMM_RERANK_", env_file=".env", extra="ignore")
 
 
+class CoreIngestSettings(BaseSettings):
+    # L2/L3 escalation thresholds for Market Intel Core's L0-L3 ladder
+    # (ingestion/router.py's ceiling=3 path) -- Brand Workspace never reads
+    # these, it's pinned to ladder="L0-L1".
+    l2_min_chars: int = 400
+    l3_min_chars: int = 1200
+
+    model_config = SettingsConfigDict(env_prefix="SMM_CORE_", env_file=".env", extra="ignore")
+
+
+class EvalGateSettings(BaseSettings):
+    # dual-kb.md's zero-LLM eval gate thresholds (app/eval/gate.py) -- config,
+    # not hardcoded, so a real promotion decision can tune them without a
+    # code change (dev_guidelines.md §13).
+    max_citation_rejection_rate: float = 0.08
+    max_degraded_ratio: float = 0.05
+    max_l0_ratio: float = 0.15
+    min_coverage_ratio: float = 0.75
+
+    model_config = SettingsConfigDict(env_prefix="SMM_EVAL_", env_file=".env", extra="ignore")
+
+
+class BridgeSettings(BaseSettings):
+    # dual-kb.md §10's "measure first" answer to BRIDGE fanout cost: a fixed,
+    # instrumented cap, not an open-ended search.
+    max_run_chunks: int = 20
+    max_core_matches_per_chunk: int = 3
+    max_total_pairs: int = 60
+
+    model_config = SettingsConfigDict(env_prefix="SMM_BRIDGE_", env_file=".env", extra="ignore")
+
+
+class WebToolSettings(BaseSettings):
+    timeout_seconds: float = 10.0
+    max_retries: int = 2
+    user_agent: str = "smm-agent-research/1.0"
+
+    model_config = SettingsConfigDict(env_prefix="SMM_WEBTOOL_", env_file=".env", extra="ignore")
+
+
 db_settings = DBSettings()
 api_settings = ApiSettings()
 llm_settings = LLMSettings()
 rerank_settings = RerankSettings()
+core_ingest_settings = CoreIngestSettings()
+eval_gate_settings = EvalGateSettings()
+bridge_settings = BridgeSettings()
+webtool_settings = WebToolSettings()

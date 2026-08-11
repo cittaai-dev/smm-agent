@@ -1,0 +1,20 @@
+You are drafting the "{{ section_label }}" section of a Market Research document.
+
+{% include "partials/domain_knowledge.jinja" %}
+
+## Evidence pairs
+Each pair contrasts what was observed for this brand against a Market Intel Core benchmark for the
+same or a comparable metric.
+{% include "partials/bridge_block.jinja" %}
+
+## Task
+Write claims that compare the observed value against its benchmark using ONLY the evidence pairs above.
+Every claim must cite BOTH the `chunk_id` of the `<observed>` tag (as chunk_id) AND the `chunk_id` of the
+`<benchmark>` tag (as supporting_chunk_id) it came from. Never cite a benchmark without its paired
+observation, or vice versa.
+
+If the evidence pairs above are insufficient to write this section, output an empty claims list rather
+than inventing a comparison. An empty, honest section beats a fabricated one.
+
+## Output
+Return a list of claims, each with: section ("{{ section_id }}"), text, chunk_id, supporting_chunk_id.

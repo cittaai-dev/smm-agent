@@ -4,6 +4,7 @@ from app.domain.audience_persona import AudiencePersonaDraft, VerifiedAudiencePe
 from app.domain.claim import ClaimDraft, DerivedClaimDraft, VerifiedClaim
 from app.domain.retrieval import RetrievedContext
 from app.infra.telemetry import record_claim_verification
+from app.retrieval.bridge import BridgePair
 
 
 def compute_claim_id(section: str, text: str, *keys: str) -> str:
@@ -104,6 +105,56 @@ def verify_derived_claims(
                 section=claim.section,
                 text=claim.text,
                 source_claim_ids=claim.source_claim_ids,
+                verified=True,
+            )
+        )
+    for claim in out:
+        record_claim_verification(claim.section, claim.verified)
+    return out
+
+
+def verify_bridge_claims(claims: list[ClaimDraft], pairs: list[BridgePair]) -> list[VerifiedClaim]:
+    """BRIDGE's P4 discipline: a claim is verified iff (chunk_id, supporting_chunk_id)
+    matches an *actual* pair the retrieval step produced -- not two independently
+    resolvable chunk_ids that happen to exist in different pairs. That distinction
+    matters: citing a real observation against an unrelated benchmark would be a
+    fabricated comparison even though both halves are individually real evidence."""
+    known_pairs = {(p.run_chunk.chunk_id, p.core_chunk.chunk_id) for p in pairs}
+    out: list[VerifiedClaim] = []
+    for claim in claims:
+        if claim.chunk_id is None or claim.supporting_chunk_id is None:
+            out.append(
+                VerifiedClaim(
+                    claim_id=compute_claim_id(claim.section, claim.text),
+                    section=claim.section,
+                    text=claim.text,
+                    chunk_id=claim.chunk_id or "",
+                    verified=False,
+                    rejection_reason="no_citation",
+                )
+            )
+            continue
+        if (claim.chunk_id, claim.supporting_chunk_id) not in known_pairs:
+            out.append(
+                VerifiedClaim(
+                    claim_id=compute_claim_id(claim.section, claim.text, claim.chunk_id),
+                    section=claim.section,
+                    text=claim.text,
+                    chunk_id=claim.chunk_id,
+                    verified=False,
+                    rejection_reason="missing_bridge_pair",
+                )
+            )
+            continue
+        run_chunk = next(p.run_chunk for p in pairs if p.run_chunk.chunk_id == claim.chunk_id)
+        out.append(
+            VerifiedClaim(
+                claim_id=compute_claim_id(claim.section, claim.text, claim.chunk_id),
+                section=claim.section,
+                text=claim.text,
+                chunk_id=claim.chunk_id,
+                supporting_chunk_id=claim.supporting_chunk_id,
+                block_span=run_chunk.block_span,
                 verified=True,
             )
         )

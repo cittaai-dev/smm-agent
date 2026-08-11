@@ -4,11 +4,12 @@ from app.domain.sop1 import SOP1_SECTIONS, SectionSpec
 
 
 def core_kb_available() -> bool:
-    """Market Intel Core doesn't exist as infrastructure until Step 4 (dual-kb.md,
-    implementation-roadmap). Hardcoded False is the honest Step 2 answer, not a
-    stub -- flipping it early would silently fabricate core_only/bridge sections
-    against zero curated evidence."""
-    return False
+    """Step 4 earns the right to answer this from real state: True once at
+    least one Market Intel Core version has been promoted (kb_version.status =
+    'promoted'), via orchestration/core_kb.py -- never a stub flipped by hand."""
+    from app.orchestration.core_kb import get_active_core_version
+
+    return get_active_core_version() is not None
 
 
 def run_section(brand_id: str, spec: SectionSpec, prior: dict[str, SectionResult]) -> SectionResult:
@@ -29,6 +30,16 @@ def run_section(brand_id: str, spec: SectionSpec, prior: dict[str, SectionResult
         from app.orchestration.synthesis_only import run_synthesis_only
 
         return run_synthesis_only(brand_id, spec, prior)
+
+    if spec.retrieval_mode == "core_only":
+        from app.orchestration.core_only_runner import run_core_only
+
+        return run_core_only(brand_id, spec)
+
+    if spec.retrieval_mode == "bridge":
+        from app.orchestration.bridge_runner import run_bridge
+
+        return run_bridge(brand_id, spec)
 
     # union -- the only mode left, and the one Step 1's graph already proves.
     from app.orchestration.graph import run_pipeline

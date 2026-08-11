@@ -11,15 +11,18 @@ from app.orchestration.tracing import traced_llm_call
 from app.prompts.render import (
     PlanContext,
     RepairContext,
+    SynthesizeBridgeContext,
     SynthesizeContext,
     SynthesizeFromPriorContext,
     UpstreamSectionClaims,
     render_plan,
     render_repair,
     render_synthesize,
+    render_synthesize_bridge,
     render_synthesize_from_prior,
     render_synthesize_target_audience,
 )
+from app.retrieval.bridge import BridgePair
 
 
 class LLMNotConfiguredError(RuntimeError):
@@ -136,6 +139,28 @@ def call_synthesize_from_prior(
         temperature=llm_settings.synthesize_temperature,
         messages=[{"role": "system", "content": prompt}],
         response_format=_DerivedSynthesisOutput,
+    ).choices[0].message.parsed
+    return parsed.claims
+
+
+@traced_llm_call("synthesize")
+@traced_call_site("synthesize")
+def call_synthesize_bridge(section: str, pairs: list[BridgePair]) -> list[ClaimDraft]:
+    """Same call site as call_synthesize (P2 counts it once) -- BRIDGE mode's
+    input shape is pairs, not raw chunks, but it's still exactly one
+    generative call per section run, same as every other synthesize variant."""
+    ctx = SynthesizeBridgeContext(
+        section_id=section,
+        section_label=SECTION_LABELS[section],
+        pairs=pairs,
+        domain_facts=facts_for(section),
+    )
+    prompt = render_synthesize_bridge(ctx)
+    parsed = _client().beta.chat.completions.parse(
+        model=llm_settings.synthesize_model,
+        temperature=llm_settings.synthesize_temperature,
+        messages=[{"role": "system", "content": prompt}],
+        response_format=_SynthesisOutput,
     ).choices[0].message.parsed
     return parsed.claims
 

@@ -1,0 +1,10 @@
+{% for pair in pairs %}
+<evidence_pair>
+<observed kb_id="{{ pair.run_chunk.kb_id }}" chunk_id="{{ pair.run_chunk.chunk_id }}">
+{{ pair.run_chunk.text }}
+</observed>
+<benchmark kb_id="{{ pair.core_chunk.kb_id }}" chunk_id="{{ pair.core_chunk.chunk_id }}">
+{{ pair.core_chunk.text }}
+</benchmark>
+</evidence_pair>
+{% endfor %}
