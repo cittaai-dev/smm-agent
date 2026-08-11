@@ -139,3 +139,48 @@ def test_add_note_rejects_unknown_document():
         json={"section": "brand_overview", "text": "x", "author": "jane@agency.com"},
     )
     assert response.status_code == 404
+
+
+def test_checkpoint_preview_matches_what_approve_would_enforce(sample_file, fake_synthesize_grounded):
+    ingest_file(brand_id="brand-partial", file_path=sample_file)
+    client = TestClient(app)
+    document = client.post("/brands/brand-partial/research/run-all").json()
+
+    preview = client.get(f"/documents/{document['id']}/checkpoint")
+    assert preview.status_code == 200
+    assert preview.json()["all_sections_filled"] is True
+    assert preview.json()["personas_grounded"] is False  # no persona extraction wired for this fixture
+
+    approve = client.post(
+        f"/documents/{document['id']}/approve",
+        json={"approver_id": "team_lead", "decision": "approved"},
+    )
+    assert approve.json()["detail"]["checkpoint"] == preview.json()
+
+
+def test_checkpoint_preview_rejects_unknown_document():
+    client = TestClient(app)
+    response = client.get("/documents/does-not-exist/checkpoint")
+    assert response.status_code == 404
+
+
+def test_approval_gate_round_trips_decision_provenance(sample_file, fake_full_document_pipeline):
+    ingest_file(brand_id="brand-full", file_path=sample_file)
+    client = TestClient(app)
+    document = _run_full_document("brand-full", client, fake_full_document_pipeline)
+
+    before = client.get(f"/documents/{document['id']}/approval-gate")
+    assert before.status_code == 200
+    assert before.json() is None  # no decision yet
+
+    client.post(
+        f"/documents/{document['id']}/approve",
+        json={"approver_id": "team_lead", "decision": "approved", "note": "Looks solid."},
+    )
+
+    after = client.get(f"/documents/{document['id']}/approval-gate").json()
+    assert after["approver_id"] == "team_lead"
+    assert after["decision"] == "approved"
+    assert after["note"] == "Looks solid."
+    assert after["checkpoint"]["all_sections_filled"] is True
+    assert after["decided_at"] is not None

@@ -2,27 +2,49 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { use } from "react";
-import { approveDocument, getDocument } from "@/lib/api";
+import { approveDocument, ApiError, getCheckpoint, getDocument } from "@/lib/api";
 import { ApproveButton } from "@/components/ApproveButton";
 import { ClaimList } from "@/components/ClaimList";
+import { DistributionPanel } from "@/components/DistributionPanel";
+import { PersonaList } from "@/components/PersonaList";
+import { QualityCheckpointPanel } from "@/components/QualityCheckpointPanel";
 import { SectionOutline } from "@/components/SectionOutline";
 import { StatusBadge } from "@/components/StatusBadge";
+import { StrategicNotesPanel } from "@/components/StrategicNotesPanel";
 import { SECTION_LABELS, SECTION_ORDER } from "@/lib/sections";
+import type { CheckpointFailedDetail } from "@/lib/types";
+
+function isCheckpointFailedDetail(detail: unknown): detail is CheckpointFailedDetail {
+  return (
+    typeof detail === "object" &&
+    detail !== null &&
+    (detail as { reason?: unknown }).reason === "quality_checkpoint_failed"
+  );
+}
 
 export default function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: documentId } = use(params);
   const queryClient = useQueryClient();
   const queryKey = ["document", documentId];
+  const checkpointKey = ["checkpoint", documentId];
 
   const documentQuery = useQuery({
     queryKey,
     queryFn: () => getDocument(documentId),
   });
 
+  // Live preview of the same gate /approve enforces -- lets a Team Lead see
+  // why approval is blocked before they click, not just after a 422.
+  const checkpointQuery = useQuery({
+    queryKey: checkpointKey,
+    queryFn: () => getCheckpoint(documentId),
+  });
+
   const approve = useMutation({
     mutationFn: () => approveDocument(documentId, "team_lead", "approved"),
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKey, updated);
+      queryClient.invalidateQueries({ queryKey: checkpointKey });
     },
   });
 
@@ -34,6 +56,10 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   }
 
   const document = documentQuery.data;
+  const checkpoint = checkpointQuery.data;
+  const approveError = approve.error instanceof ApiError ? approve.error : null;
+  const checkpointFailure =
+    approveError && isCheckpointFailedDetail(approveError.detail) ? approveError.detail : null;
 
   return (
     <main className="flex flex-col gap-6">
@@ -52,18 +78,35 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
             <div key={id} className="flex flex-col gap-2">
               <h2 className="text-lg font-medium">{SECTION_LABELS[id]}</h2>
               <ClaimList claims={section.claims} />
+              <PersonaList personas={section.personas} />
             </div>
           );
         })}
       </div>
 
+      {checkpoint && <QualityCheckpointPanel checkpoint={checkpoint} />}
+
       <div className="mt-2">
-        <ApproveButton status={document.status} onApprove={() => approve.mutate()} pending={approve.isPending} />
+        <ApproveButton
+          status={document.status}
+          onApprove={() => approve.mutate()}
+          pending={approve.isPending}
+          checkpointPassed={checkpoint ? Object.values(checkpoint).every(Boolean) : true}
+        />
       </div>
 
-      {approve.isError && (
+      {approve.isError && !checkpointFailure && (
         <p className="text-sm text-red-700">Approval failed: {(approve.error as Error).message}</p>
       )}
+      {checkpointFailure && (
+        <p className="text-sm text-red-700">
+          Approval blocked — the quality checkpoint above must pass first.
+        </p>
+      )}
+
+      <StrategicNotesPanel documentId={documentId} />
+
+      <DistributionPanel documentId={documentId} documentStatus={document.status} />
     </main>
   );
 }

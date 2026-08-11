@@ -17,4 +17,14 @@ describe("ApproveButton", () => {
     render(<ApproveButton status="pending_approval" onApprove={vi.fn()} pending />);
     expect(screen.getByRole("button", { name: "Approving…" })).toBeDisabled();
   });
+
+  it("is disabled when pending approval but the quality checkpoint hasn't passed -- server is still the real gate, this is UX only", () => {
+    render(<ApproveButton status="pending_approval" onApprove={vi.fn()} checkpointPassed={false} />);
+    expect(screen.getByRole("button", { name: "Approve" })).toBeDisabled();
+  });
+
+  it("defaults checkpointPassed to true so callers without a checkpoint fetch keep working", () => {
+    render(<ApproveButton status="pending_approval" onApprove={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Approve" })).toBeEnabled();
+  });
 });
