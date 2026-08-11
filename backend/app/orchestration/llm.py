@@ -17,6 +17,12 @@ from app.prompts.render import (
 SECTION_LABELS = {"brand_overview": "Brand overview"}
 
 
+class LLMNotConfiguredError(RuntimeError):
+    """Raised instead of letting the OpenAI SDK's own error surface -- that
+    error tells the caller to set OPENAI_API_KEY, which does nothing here
+    since this app reads SMM_LLM_OPENAI_API_KEY (env_prefix="SMM_LLM_")."""
+
+
 class _PlanOutput(BaseModel):
     sub_queries: list[str]
     k_per_query: int = 8
@@ -27,6 +33,11 @@ class _SynthesisOutput(BaseModel):
 
 
 def _client():
+    if not llm_settings.openai_api_key:
+        raise LLMNotConfiguredError(
+            "SMM_LLM_OPENAI_API_KEY is not set. Add it to backend/.env "
+            "(see backend/.env.example) or export it, then restart the backend."
+        )
     from openai import OpenAI
 
     return OpenAI(api_key=llm_settings.openai_api_key)

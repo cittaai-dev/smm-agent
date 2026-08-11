@@ -16,16 +16,22 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:dev@postgres/smm
       REDIS_URL: redis://redis
+      # The browser calls the API from the frontend's origin, not the docker
+      # network -- this must match wherever the frontend is actually served.
+      SMM_API_CORS_ORIGINS: http://localhost:3000
     ports: ["8000:8000"]
   worker:
     build: ../backend
-    command: celery -A app.workers worker --loglevel=info
+    command: celery -A app.infra.celery_app worker --loglevel=info
     depends_on: [postgres, redis]
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:dev@postgres/smm
       REDIS_URL: redis://redis
   frontend:
-    build: ../frontend
+    build:
+      context: ../frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
     ports: ["3000:3000"]
     depends_on: [backend]
 
