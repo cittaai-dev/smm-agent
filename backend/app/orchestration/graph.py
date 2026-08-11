@@ -59,6 +59,13 @@ def repair_node(state: RunState) -> RunState:
 
 
 def route_after_verify(state: RunState) -> str:
+    # all(...) on an empty list is vacuously True -- zero claims must never
+    # read as "everything verified." Repair is also pointless here: call_repair
+    # only re-tags claims whose chunk_id doesn't resolve, so on an empty list
+    # it's a no-op call site burned for nothing. Go straight to
+    # insufficient_grounding (P5: degrade, never silently pass empty as good).
+    if not state.verified:
+        return "insufficient_grounding"
     all_ok = all(c.verified for c in state.verified)
     if all_ok:
         return "deliver"

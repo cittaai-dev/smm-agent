@@ -53,6 +53,78 @@ def test_idempotent_reupload(sample_file):
     assert count_1 > 0
 
 
+def test_ingest_is_not_deduped_across_brands(sample_file):
+    # two different brands uploading byte-identical content must both ingest --
+    # content_hash dedup is scoped to (kb_id, content_hash), not global.
+    ingest_file(brand_id="brand-a", file_path=sample_file)
+    ingest_file(brand_id="brand-b", file_path=sample_file)
+
+    assert _chunk_count("brand-a") > 0
+    assert _chunk_count("brand-b") > 0
+
+
+def test_empty_synthesis_is_insufficient_grounding_not_pending_approval(
+    sample_file, fake_synthesize_empty
+):
+    # zero claims must never read as "everything verified" (all() on an empty
+    # list is vacuously True) -- this is the bug behind claims=[] + status
+    # ending up approvable.
+    ingest_file(brand_id="test-brand", file_path=sample_file)
+
+    result = run_pipeline(brand_id="test-brand")
+
+    assert result.deliverable.claims == []
+    assert result.deliverable.status == "insufficient_grounding"
+    # repair is pointless on an empty claim list (nothing to re-tag) -- must
+    # not have burned a call site on it.
+    assert result.deliverable.call_site_trace["repair"] == 0
+
+
+def test_approve_rejects_zero_claim_deliverable():
+    # The pipeline itself can no longer reach pending_approval with zero
+    # claims (route_after_verify routes that to insufficient_grounding), so
+    # this exercises the endpoint's own defensive check directly -- it's
+    # belt-and-suspenders (P4/P5), not dead code: a deliverable's invariants
+    # shouldn't depend solely on which code path produced the row.
+    from app.main import app
+
+    with get_session() as session:
+        session.execute(
+            """INSERT INTO deliverable (id, brand_id, status, claims, call_site_trace)
+               VALUES ('del-x', 'test-brand', 'pending_approval', '[]'::jsonb, '{}'::jsonb)"""
+        )
+        session.commit()
+
+    client = TestClient(app)
+    approve_response = client.post(
+        "/deliverables/del-x/approve",
+        json={"approver_id": "team_lead", "decision": "approved"},
+    )
+
+    assert approve_response.status_code == 422
+
+
+def test_approve_rejects_already_decided_deliverable(sample_file, fake_synthesize_grounded):
+    ingest_file(brand_id="test-brand", file_path=sample_file)
+    from app.main import app
+
+    client = TestClient(app)
+    run_response = client.post("/brands/test-brand/research/run")
+    deliverable_id = run_response.json()["id"]
+
+    first = client.post(
+        f"/deliverables/{deliverable_id}/approve",
+        json={"approver_id": "team_lead", "decision": "approved"},
+    )
+    assert first.status_code == 200
+
+    second = client.post(
+        f"/deliverables/{deliverable_id}/approve",
+        json={"approver_id": "team_lead", "decision": "approved"},
+    )
+    assert second.status_code == 409
+
+
 def test_cors_allows_configured_frontend_origin():
     from app.main import app
 
