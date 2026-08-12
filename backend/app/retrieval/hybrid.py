@@ -21,6 +21,15 @@ def _rrf_fuse(dense: list[Chunk], sparse: list[Chunk], k: int = 60) -> list[Chun
 
 
 def search_hybrid(kb_id: str, plan: RetrievalPlan) -> list[Chunk]:
+    # P3: confinement is enforced by get_session(kb_id=...)'s RLS role-drop
+    # (infra/db.py), and this function's only caller today (graph.py) always
+    # passes a kb_id that already passed api/deps.py's grant check. This
+    # assertion is a cheap fail-fast at the retrieval entry point itself, so a
+    # future caller wiring in an unscoped kb_id fails loudly here instead of
+    # silently relying on downstream RLS to be the only thing standing between
+    # it and cross-brand data.
+    if not kb_id.startswith(("run:", "core:")):
+        raise ValueError(f"search_hybrid: kb_id {kb_id!r} is not a recognized run:/core: scope")
     dense_results = search_dense(kb_id, plan)
     sparse_results = search_sparse(kb_id, plan)
     fused = _rrf_fuse(dense_results, sparse_results)[: plan.k_per_query]

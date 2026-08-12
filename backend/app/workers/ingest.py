@@ -18,6 +18,13 @@ def infer_source_kind(file_path: str) -> str:
     return "analytics" if Path(file_path).suffix.lower() in _ANALYTICS_EXTS else "brand_material"
 
 
+def compute_file_id(kb_id: str, content_hash: str) -> str:
+    """Content-addressed like doc_id/chunk_id (P6): deterministic from kb_id +
+    content_hash so the API route can hand the caller a correlation id at
+    upload time, before ingest_file's celery task has even run."""
+    return f"file-{hashlib.sha256(f'{kb_id}:{content_hash}'.encode()).hexdigest()[:12]}"
+
+
 def _mark_source_file(file_id: str, brand_id: str, status: str, reason: str | None) -> None:
     with get_session(kb_id=f"run:{brand_id}") as session:
         session.execute(
@@ -39,7 +46,7 @@ def ingest_file(brand_id: str, file_path: str, source_kind: str | None = None) -
     # identical content would collide on the same doc_id/chunk_id PRIMARY KEY
     # the moment the content_hash uniqueness constraint stopped blocking them.
     doc_id = f"doc-{hashlib.sha256(f'{kb_id}:{content_hash}'.encode()).hexdigest()[:12]}"
-    file_id = f"file-{hashlib.sha256(f'{kb_id}:{content_hash}'.encode()).hexdigest()[:12]}"
+    file_id = compute_file_id(kb_id, content_hash)
 
     with get_session(kb_id=kb_id) as session:
         existing = session.execute(

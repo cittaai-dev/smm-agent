@@ -5,7 +5,7 @@ import pytest
 from app.domain.audience_persona import AudiencePersonaDraft
 from app.domain.claim import ClaimDraft
 from app.domain.retrieval import RetrievalPlan
-from app.infra.settings import db_settings, rerank_settings
+from app.infra.settings import auth_settings, db_settings, rerank_settings
 
 # Must happen before any test imports app.infra.db / calls get_session() --
 # get_engine() lazily creates a module-global engine from db_settings.database_url
@@ -17,6 +17,13 @@ from app.infra.settings import db_settings, rerank_settings
 #   TEST_DATABASE_URL=$TEST_DATABASE_URL DATABASE_URL=$TEST_DATABASE_URL \
 #     .venv/bin/alembic upgrade head   # or just re-run alembic with DATABASE_URL=the test url
 db_settings.database_url = db_settings.test_database_url
+
+# Same reasoning: force this off unconditionally, regardless of what a
+# developer's local backend/.env has set for their own convenience (the
+# pydantic-settings singleton below is constructed once, at import time, from
+# that .env -- a fixture that runs later would be too late to matter). Every
+# test that asserts real 401/403 rejection depends on this staying disabled.
+auth_settings.dev_bypass = False
 
 from app.infra.db import get_session
 
@@ -134,6 +141,10 @@ def fake_synthesize_with_personas(monkeypatch, fake_plan):
                 pain_points=["No time to brew coffee well"],
                 interests=["Convenience", "Quality"],
                 chunk_ids=[chunk.chunk_id],
+                age_range="30-45",
+                location="Urban US",
+                occupation_income="Mid-career professional, $70k-$120k",
+                preferred_platforms=["Instagram", "LinkedIn"],
             )
         ]
         return claims, personas
@@ -179,14 +190,26 @@ def fake_full_document_pipeline(monkeypatch, fake_plan):
                 pain_points=["No time to brew coffee well"],
                 interests=["Convenience", "Quality"],
                 chunk_ids=[chunk.chunk_id],
+                age_range="30-45",
+                location="Urban US",
+                occupation_income="Mid-career professional, $70k-$120k",
+                preferred_platforms=["Instagram", "LinkedIn"],
             )
         ]
         return claims, personas
 
-    def _fake_synthesize_from_prior(section: str, upstream, missing_sections, cost_tracker=None):
+    def _fake_synthesize_from_prior(
+        section: str, upstream, missing_sections, cost_tracker=None, structured_fields=None
+    ):
         claim = upstream[0].claims[0]
+        field_key = structured_fields[0] if structured_fields else None
         return [
-            DerivedClaimDraft(section=section, text=f"Derived claim for {section}.", source_claim_ids=[claim.claim_id])
+            DerivedClaimDraft(
+                section=section,
+                text=f"Derived claim for {section}.",
+                source_claim_ids=[claim.claim_id],
+                field_key=field_key,
+            )
         ]
 
     monkeypatch.setattr("app.orchestration.llm.call_synthesize", _fake_synthesize)

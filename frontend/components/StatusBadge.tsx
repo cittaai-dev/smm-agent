@@ -1,11 +1,11 @@
 import type { DocumentStatus } from "@/lib/types";
 
 const STYLES: Record<DocumentStatus, string> = {
-  draft: "bg-slate-100 text-slate-700",
-  pending_approval: "bg-amber-100 text-amber-800",
-  approved: "bg-green-100 text-green-800",
-  rejected: "bg-red-100 text-red-800",
-  insufficient_grounding: "bg-orange-100 text-orange-800",
+  draft: "bg-surface2 text-text-dim",
+  pending_approval: "bg-run-soft text-run",
+  approved: "bg-success-soft text-success",
+  rejected: "bg-danger-soft text-danger",
+  insufficient_grounding: "bg-run-soft text-run",
 };
 
 const LABELS: Record<DocumentStatus, string> = {

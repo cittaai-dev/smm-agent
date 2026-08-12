@@ -7,7 +7,7 @@ import type { ApprovalEvent } from "@/lib/types";
 export function DecisionHistoryStrip({ events }: { events: ApprovalEvent[] }) {
   if (events.length === 0) return null;
   return (
-    <div className="flex flex-col gap-1 text-xs text-slate-500" data-testid="decision-history">
+    <div className="flex flex-col gap-1 text-xs text-text-dim" data-testid="decision-history">
       {events.map((e) => (
         <div key={e.id ?? `${e.decision}-${e.decided_at}`}>
           <span className="font-medium capitalize">{e.decision}</span> by {e.approver_id}

@@ -42,7 +42,9 @@ def run_synthesis_only(brand_id: str, spec: SectionSpec, prior: dict[str, Sectio
         )
 
     reset_call_counts()  # this section's run doesn't go through plan_node
-    claims = call_synthesize_from_prior(spec.id, upstream, missing_sections)
+    claims = call_synthesize_from_prior(
+        spec.id, upstream, missing_sections, structured_fields=spec.structured_fields
+    )
     verified = verify_derived_claims(claims, all_upstream_claims)
 
     if not verified or not all(c.verified for c in verified):

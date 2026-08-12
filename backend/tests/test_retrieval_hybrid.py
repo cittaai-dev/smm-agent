@@ -1,3 +1,5 @@
+import pytest
+
 from app.domain.chunk import Chunk
 from app.domain.retrieval import RetrievalPlan
 from app.retrieval.dense import search_dense
@@ -31,6 +33,14 @@ def test_rrf_fuse_is_deterministic():
     assert [c.chunk_id for c in _rrf_fuse(dense, sparse)] == [
         c.chunk_id for c in _rrf_fuse(dense, sparse)
     ]
+
+
+def test_search_hybrid_rejects_unscoped_kb_id():
+    # P3 fail-fast: a caller that doesn't pass a run:/core: scoped kb_id
+    # should error loudly here, not silently fall through to RLS alone.
+    plan = RetrievalPlan(sub_queries=["q"], k_per_query=5)
+    with pytest.raises(ValueError, match="not a recognized run:/core: scope"):
+        search_hybrid(kb_id="hybrid-test", plan=plan)
 
 
 def test_search_hybrid_unions_dense_and_sparse_results(tmp_path):

@@ -1,3 +1,26 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Light-theme tokens adapted from the "Signal — Brand Run" design mockup --
+   same semantic-color system (purple accent, orange "run"/pending, green
+   "core"/verified, red rejected), inverted from the mockup's dark palette to
+   light surfaces/text. See tailwind.config.ts for the utility-class mapping. */
+:root {
+  --bg: #ffffff;
+  --surface: #f8f9fb;
+  --surface-2: #f1f2f5;
+  --border: #e2e4e9;
+  --text: #14161a;
+  --text-dim: #5b6069;
+  --text-faint: #9aa0a8;
+  --accent: #7c3aed;
+  --accent-soft: rgba(124, 58, 237, 0.08);
+  --accent-text: #6d28d9;
+  --success: #059669;
+  --success-soft: rgba(5, 150, 105, 0.08);
+  --run: #ea580c;
+  --run-soft: rgba(234, 88, 12, 0.08);
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.08);
+}

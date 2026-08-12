@@ -3,6 +3,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.api.deps import _lookup_api_key
 from app.infra.db import get_session
 from app.infra.pubsub import channel_for, get_async_client
+from app.infra.settings import auth_settings
 
 ws_router = APIRouter()
 
@@ -11,6 +12,8 @@ def _is_authorized_for_brand(api_key: str | None, brand_id: str) -> bool:
     """Same api-key -> brand_grant check as resolve_brand_scope (api/deps.py),
     adapted for a query param instead of a header -- browsers can't set
     custom headers on the WebSocket handshake."""
+    if auth_settings.dev_bypass:
+        return True
     if not api_key:
         return False
     resolved = _lookup_api_key(api_key)

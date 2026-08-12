@@ -10,6 +10,7 @@ const verified: VerifiedClaim = {
   chunk_id: "abc123",
   source_claim_ids: [],
   block_span: [0, 0],
+  confidence: 1,
   verified: true,
   rejection_reason: null,
 };

@@ -26,6 +26,9 @@ RetrievalMode = Literal["union", "core_only", "bridge", "synthesis_only", "direc
 SectionStatus = Literal["verified", "insufficient_evidence", "team_provided"]
 
 
+StructuredOutput = Literal["competitor_table", "platform_table", "swot_grid"]
+
+
 class SectionSpec(BaseModel):
     id: SectionId
     label: str
@@ -36,7 +39,29 @@ class SectionSpec(BaseModel):
     # on the registry rather than a hardcoded section-id check in graph.py,
     # matching how retrieval_mode/requires_core already drive dispatch.
     extracts_audience_personas: bool = False
+    # TEMPLATE_1_Market_Research.docx renders competitor_analysis/
+    # platform_analysis/swot as a table or grid, not flat prose -- these 4
+    # fields are the vocabulary the synthesize_bridge/synthesize_from_prior v2
+    # prompts (and the frontend's table/grid components, and docx_builder.py)
+    # all key off of, so claim.group_key/field_key mean the same thing
+    # everywhere a given section's claims are grouped. None/[] for every
+    # other section -- their claims are never tagged, and render as prose.
+    structured_output: StructuredOutput | None = None
+    structured_group_label: str | None = None  # "competitor" | "platform" | None
+    structured_fields: list[str] = []  # column/bucket vocabulary
+    structured_row_values: list[str] = []  # fixed group_key enum; [] = LLM-determined
 
+
+# platform_analysis's fixed row set (TEMPLATE_1_Market_Research.docx table).
+PLATFORM_NAMES: list[str] = [
+    "Instagram",
+    "Facebook",
+    "LinkedIn",
+    "YouTube",
+    "X (Twitter)",
+    "Threads",
+    "Pinterest",
+]
 
 SECTION_LABELS: dict[SectionId, str] = {
     "brand_overview": "Brand overview",
@@ -91,6 +116,15 @@ SOP1_SECTIONS: list[SectionSpec] = [
         label=SECTION_LABELS["competitor_analysis"],
         requires_core=True,
         retrieval_mode="bridge",
+        structured_output="competitor_table",
+        structured_group_label="competitor",
+        structured_fields=[
+            "offer_positioning",
+            "strengths",
+            "weaknesses",
+            "content_frequency",
+            "gaps_to_use",
+        ],
     ),
     SectionSpec(
         id="swot",
@@ -104,6 +138,8 @@ SOP1_SECTIONS: list[SectionSpec] = [
             "market_overview",
             "competitor_analysis",
         ],
+        structured_output="swot_grid",
+        structured_fields=["strength", "weakness", "opportunity", "threat"],
     ),
     SectionSpec(
         id="positioning_usp",
@@ -117,6 +153,10 @@ SOP1_SECTIONS: list[SectionSpec] = [
         label=SECTION_LABELS["platform_analysis"],
         requires_core=True,
         retrieval_mode="bridge",
+        structured_output="platform_table",
+        structured_group_label="platform",
+        structured_fields=["audience_here", "priority", "notes"],
+        structured_row_values=PLATFORM_NAMES,
     ),
     SectionSpec(
         id="trends_opportunities",

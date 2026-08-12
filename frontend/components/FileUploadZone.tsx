@@ -25,17 +25,17 @@ export function FileUploadZone({
 
   return (
     <div
-      className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 p-10 text-center"
+      className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-10 text-center"
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
         handleFiles(e.dataTransfer.files);
       }}
     >
-      <p className="text-slate-600">{label}</p>
+      <p className="text-text-dim">{label}</p>
       <button
         type="button"
-        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         disabled={disabled}
         onClick={() => inputRef.current?.click()}
       >
@@ -48,7 +48,7 @@ export function FileUploadZone({
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
       />
-      {lastFileName && <p className="text-xs text-slate-500">Last selected: {lastFileName}</p>}
+      {lastFileName && <p className="text-xs text-text-dim">Last selected: {lastFileName}</p>}
     </div>
   );
 }

@@ -22,7 +22,8 @@ describe("SectionRow", () => {
   it("shows claim count for a verified section", () => {
     const claim = {
       claim_id: "c1", section: "brand_overview", text: "x", chunk_id: "abc",
-      source_claim_ids: [], block_span: [0, 0] as [number, number], verified: true, rejection_reason: null,
+      source_claim_ids: [], block_span: [0, 0] as [number, number], confidence: 1,
+      verified: true, rejection_reason: null,
     };
     render(<SectionRow section={{ ...base, claims: [claim, claim] }} />);
     expect(screen.getByText("2 claims verified")).toBeInTheDocument();

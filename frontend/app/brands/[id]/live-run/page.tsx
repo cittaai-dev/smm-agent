@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { use, useState } from "react";
+import { use } from "react";
 import { collectNow } from "@/lib/api";
 import { useDataCollectionStatus } from "@/hooks/useDataCollectionStatus";
 
@@ -18,8 +18,7 @@ const PHASES = [
 // broadcast in real time (docs/implement/DATA_COLLECTION_QUICK_START.md §2).
 export default function LiveRunPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: brandId } = use(params);
-  const [apiKey, setApiKey] = useState("");
-  const status = useDataCollectionStatus(brandId, apiKey);
+  const status = useDataCollectionStatus(brandId);
 
   const trigger = useMutation({
     mutationFn: () => collectNow(brandId),
@@ -27,22 +26,12 @@ export default function LiveRunPage({ params }: { params: Promise<{ id: string }
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 p-6">
-      <h1 className="text-lg font-semibold text-slate-900">Live Data Collection — {brandId}</h1>
-
-      <label className="flex flex-col gap-1 text-sm">
-        API key
-        <input
-          className="rounded border border-slate-300 px-2 py-1"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          placeholder="Your api key"
-        />
-      </label>
+      <h1 className="text-lg font-semibold text-text">Live Data Collection — {brandId}</h1>
 
       <button
         type="button"
-        className="w-fit rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-        disabled={!apiKey || trigger.isPending}
+        className="w-fit rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={trigger.isPending}
         onClick={() => trigger.mutate()}
       >
         {trigger.isPending ? "Starting…" : "Start collection"}
@@ -57,10 +46,10 @@ export default function LiveRunPage({ params }: { params: Promise<{ id: string }
               key={p.name}
               className={`rounded p-3 text-sm ${
                 active
-                  ? "border-l-4 border-blue-500 bg-blue-50"
+                  ? "border-l-4 border-accent bg-accent-soft"
                   : reached
-                    ? "bg-emerald-50 text-emerald-800"
-                    : "bg-slate-50 text-slate-400"
+                    ? "bg-success-soft text-success"
+                    : "bg-surface2 text-text-faint"
               }`}
             >
               {p.label}
@@ -70,16 +59,16 @@ export default function LiveRunPage({ params }: { params: Promise<{ id: string }
         })}
       </div>
 
-      <div className="h-48 overflow-y-auto rounded bg-slate-900 p-4 font-mono text-sm text-slate-100">
-        {status.messages.length === 0 && <p className="text-slate-500">No status yet.</p>}
+      <div className="h-48 overflow-y-auto rounded bg-text p-4 font-mono text-sm text-bg">
+        {status.messages.length === 0 && <p className="text-text-faint">No status yet.</p>}
         {status.messages.map((m, i) => (
-          <div key={i} className="text-slate-300">
-            <span className="text-slate-500">[{new Date(m.timestamp).toLocaleTimeString()}]</span> {m.message}
+          <div key={i}>
+            <span className="text-text-faint">[{new Date(m.timestamp).toLocaleTimeString()}]</span> {m.message}
           </div>
         ))}
       </div>
 
-      <p className="text-xs text-slate-500">Items collected so far: {status.itemCount}</p>
+      <p className="font-mono text-xs text-text-dim">Items collected so far: {status.itemCount}</p>
     </div>
   );
 }

@@ -27,7 +27,21 @@ def upgrade() -> None:
     # SET ROLE (unlike SET SESSION AUTHORIZATION) fully drops the connecting
     # role's superuser/table-owner bypass for the rest of the transaction, so
     # this is sufficient for RLS to actually apply, not merely declarative.
-    op.execute("CREATE ROLE brand_workspace_role NOLOGIN")
+    # DO-block guarded, not a bare CREATE ROLE: roles are cluster-wide, not
+    # per-database, so this statement re-runs against every database in the
+    # same Postgres instance (dev's `smm` and `smm_test` both migrate here) --
+    # a bare CREATE ROLE would collide the second time round.
+    op.execute(
+        """
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'brand_workspace_role') THEN
+            CREATE ROLE brand_workspace_role NOLOGIN;
+          END IF;
+        END
+        $$
+        """
+    )
     op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON chunk, document_registry, source_file TO brand_workspace_role")
     op.execute("GRANT brand_workspace_role TO current_user")
 

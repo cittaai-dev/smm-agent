@@ -186,6 +186,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/brands/{brand_id}/collect-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Collect Now
+         * @description Manual trigger for workers/data_collection.py's collect_all_for_brand
+         *     (DATA_COLLECTION_QUICK_START.md §7's on-demand path) -- same task the
+         *     nightly beat schedule (infra/celery_app.py) would otherwise queue.
+         */
+        post: operations["collect_now_brands__brand_id__collect_now_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/documents/{document_id}": {
         parameters: {
             query?: never;
@@ -212,6 +234,23 @@ export interface paths {
         };
         /** Get Checkpoint */
         get: operations["get_checkpoint_documents__document_id__checkpoint_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{document_id}/export.docx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Document Docx */
+        get: operations["export_document_docx_documents__document_id__export_docx_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1068,6 +1107,31 @@ export interface components {
              * @default []
              */
             chunk_ids: string[];
+            /**
+             * Age Range
+             * @default
+             */
+            age_range: string;
+            /**
+             * Location
+             * @default
+             */
+            location: string;
+            /**
+             * Occupation Income
+             * @default
+             */
+            occupation_income: string;
+            /**
+             * Preferred Platforms
+             * @default []
+             */
+            preferred_platforms: string[];
+            /**
+             * Confidence
+             * @default 1
+             */
+            confidence: number;
             /** Verified */
             verified: boolean;
             /** Rejection Reason */
@@ -1104,10 +1168,19 @@ export interface components {
                 number,
                 number
             ];
+            /**
+             * Confidence
+             * @default 1
+             */
+            confidence: number;
             /** Verified */
             verified: boolean;
             /** Rejection Reason */
             rejection_reason?: ("missing_chunk" | "no_citation" | "missing_source_claim" | "no_source_claims" | "missing_bridge_pair") | null;
+            /** Group Key */
+            group_key?: string | null;
+            /** Field Key */
+            field_key?: string | null;
         };
     };
     responses: never;
@@ -1548,6 +1621,39 @@ export interface operations {
             };
         };
     };
+    collect_now_brands__brand_id__collect_now_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brand_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_document_documents__document_id__get: {
         parameters: {
             query?: never;
@@ -1597,6 +1703,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QualityCheckpoint"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_document_docx_documents__document_id__export_docx_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

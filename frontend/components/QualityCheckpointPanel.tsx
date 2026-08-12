@@ -16,21 +16,21 @@ const ROWS: [keyof QualityCheckpoint, string][] = [
 export function QualityCheckpointPanel({ checkpoint }: { checkpoint: QualityCheckpoint }) {
   const passed = ROWS.every(([key]) => checkpoint[key]);
   return (
-    <div className="rounded-lg border border-slate-200 p-4" data-testid="quality-checkpoint-panel">
-      <p className="mb-2 text-sm font-medium text-slate-900">Quality checkpoint</p>
+    <div className="rounded-lg border border-border p-4" data-testid="quality-checkpoint-panel">
+      <p className="mb-2 text-sm font-medium text-text">Quality checkpoint</p>
       <div className="flex flex-col gap-1">
         {ROWS.map(([key, label]) => {
           const ok = checkpoint[key];
           return (
             <div key={key} className="flex items-center justify-between py-1 text-sm">
-              <span className="text-slate-700">{label}</span>
-              <span className={ok ? "text-green-700" : "text-slate-400"}>{ok ? "✓" : "—"}</span>
+              <span className="text-text-dim">{label}</span>
+              <span className={ok ? "text-success" : "text-text-faint"}>{ok ? "✓" : "—"}</span>
             </div>
           );
         })}
       </div>
       {!passed && (
-        <p className="mt-2 text-xs text-amber-700">
+        <p className="mt-2 text-xs text-run">
           All checks must pass before this document can be approved.
         </p>
       )}

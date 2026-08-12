@@ -3,7 +3,7 @@ import { ClaimCard } from "./ClaimCard";
 
 export function ClaimList({ claims }: { claims: VerifiedClaim[] }) {
   if (claims.length === 0) {
-    return <p className="text-slate-500">No claims yet.</p>;
+    return <p className="text-text-dim">No claims yet.</p>;
   }
   return (
     <div className="flex flex-col gap-3">

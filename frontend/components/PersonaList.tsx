@@ -7,7 +7,7 @@ export function PersonaList({ personas }: { personas: VerifiedAudiencePersona[] 
   }
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Audience personas</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-text-dim">Audience personas</p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {personas.map((persona) => (
           <PersonaCard key={persona.persona_id} persona={persona} />

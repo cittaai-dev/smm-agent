@@ -28,7 +28,7 @@ def test_synthesis_only_degrades_without_llm_call_when_no_deps_available():
 
 
 def test_synthesis_only_synthesizes_from_available_deps(monkeypatch):
-    def _fake(section, upstream, missing_sections):
+    def _fake(section, upstream, missing_sections, **kwargs):
         [claim] = upstream[0].claims
         return [DerivedClaimDraft(section=section, text="Derived claim", source_claim_ids=[claim.claim_id])]
 
@@ -47,7 +47,7 @@ def test_synthesis_only_synthesizes_from_available_deps(monkeypatch):
 
 
 def test_synthesis_only_rejects_claim_citing_unverified_upstream_id(monkeypatch):
-    def _fake(section, upstream, missing_sections):
+    def _fake(section, upstream, missing_sections, **kwargs):
         return [DerivedClaimDraft(section=section, text="Fabricated", source_claim_ids=["not-a-real-id"])]
 
     monkeypatch.setattr("app.orchestration.llm.call_synthesize_from_prior", _fake)
@@ -71,7 +71,7 @@ def test_key_takeaways_synthesizes_from_partial_deps_when_core_sections_unavaila
     # missing dep (that would make it permanently degraded until Step 4).
     captured = {}
 
-    def _fake(section, upstream, missing_sections):
+    def _fake(section, upstream, missing_sections, **kwargs):
         captured["missing_sections"] = missing_sections
         claim = upstream[0].claims[0]
         return [DerivedClaimDraft(section=section, text="Key takeaway", source_claim_ids=[claim.claim_id])]
@@ -90,3 +90,32 @@ def test_key_takeaways_synthesizes_from_partial_deps_when_core_sections_unavaila
 
     assert result.status == "verified"
     assert len(captured["missing_sections"]) == 3
+
+
+def test_swot_synthesizes_with_bucket_field_key(monkeypatch):
+    # swot is the one synthesis_only section with structured_fields set
+    # (sop1.py) -- proves the bucket tag actually reaches SECTIONS_BY_ID's
+    # caller and survives verify_derived_claims untouched.
+    captured = {}
+
+    def _fake(section, upstream, missing_sections, structured_fields=None, **kwargs):
+        captured["structured_fields"] = structured_fields
+        [claim] = upstream[0].claims
+        return [
+            DerivedClaimDraft(
+                section=section, text="Deep DISCOM experience", source_claim_ids=[claim.claim_id],
+                field_key="strength",
+            )
+        ]
+
+    monkeypatch.setattr("app.orchestration.llm.call_synthesize_from_prior", _fake)
+
+    spec = SECTIONS_BY_ID["swot"]
+    prior = {dep: _verified_prior(dep) for dep in spec.depends_on}
+
+    result = run_section("brand-x", spec, prior)
+
+    assert result.status == "verified"
+    assert captured["structured_fields"] == ["strength", "weakness", "opportunity", "threat"]
+    [claim] = result.claims
+    assert claim.field_key == "strength"

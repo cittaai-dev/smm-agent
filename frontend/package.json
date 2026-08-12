@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "gen:api-types": "openapi-typescript http://localhost:8000/openapi.json -o lib/api-types.ts"
+    "gen:api-types": "python3 ../backend/scripts/dump_openapi.py /tmp/smm-openapi.json && openapi-typescript /tmp/smm-openapi.json -o lib/api-types.ts",
+    "check:api-types": "npm run gen:api-types && git diff --exit-code lib/api-types.ts"
   },
   "dependencies": {
     "next": "^15.0.0",

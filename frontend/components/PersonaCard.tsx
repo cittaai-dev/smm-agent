@@ -7,15 +7,15 @@ const REASON_LABELS: Record<string, string> = {
 };
 
 export function PersonaCard({ persona }: { persona: VerifiedAudiencePersona }) {
-  const borderColor = persona.verified ? "border-green-500" : "border-red-500";
+  const borderColor = persona.verified ? "border-success" : "border-danger";
   return (
     <div className={`rounded-lg border-2 p-4 ${borderColor}`} data-testid="persona-card">
-      <p className="font-medium text-slate-900">{persona.name}</p>
+      <p className="font-medium text-text">{persona.name}</p>
 
       {persona.pain_points.length > 0 && (
         <div className="mt-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Pain points</p>
-          <ul className="list-inside list-disc text-sm text-slate-700">
+          <p className="text-xs font-medium uppercase tracking-wide text-text-dim">Pain points</p>
+          <ul className="list-inside list-disc text-sm text-text-dim">
             {persona.pain_points.map((p) => (
               <li key={p}>{p}</li>
             ))}
@@ -25,8 +25,8 @@ export function PersonaCard({ persona }: { persona: VerifiedAudiencePersona }) {
 
       {persona.interests.length > 0 && (
         <div className="mt-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Interests</p>
-          <ul className="list-inside list-disc text-sm text-slate-700">
+          <p className="text-xs font-medium uppercase tracking-wide text-text-dim">Interests</p>
+          <ul className="list-inside list-disc text-sm text-text-dim">
             {persona.interests.map((p) => (
               <li key={p}>{p}</li>
             ))}
@@ -34,14 +34,16 @@ export function PersonaCard({ persona }: { persona: VerifiedAudiencePersona }) {
         </div>
       )}
 
-      <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
-        <code className="rounded bg-slate-100 px-1.5 py-0.5">
+      <div className="mt-3 flex items-center gap-2 text-xs text-text-dim">
+        <code className="rounded bg-surface2 px-1.5 py-0.5 font-mono">
           {persona.chunk_ids.length > 0 ? persona.chunk_ids.join(", ") : "no citation"}
         </code>
         {persona.verified ? (
-          <span className="text-green-700">verified</span>
+          <span className="text-success">
+            verified{persona.confidence < 1 ? ` (confidence ${persona.confidence.toFixed(2)})` : ""}
+          </span>
         ) : (
-          <span className="text-red-700">
+          <span className="text-danger">
             rejected — {REASON_LABELS[persona.rejection_reason ?? ""] ?? persona.rejection_reason}
           </span>
         )}

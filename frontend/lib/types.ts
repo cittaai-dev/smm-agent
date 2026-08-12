@@ -28,6 +28,7 @@ export type SourceKind = components["schemas"]["SourceFile"]["source_kind"];
 
 export interface UploadResult {
   status: string;
+  file_id: string;
 }
 
 export interface TeamInput {

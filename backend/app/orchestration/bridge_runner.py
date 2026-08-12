@@ -40,7 +40,13 @@ def run_bridge(brand_id: str, spec: SectionSpec) -> SectionResult:
             call_site_trace={"plan": 1, "synthesize": 0, "repair": 0},
         )
 
-    claims = call_synthesize_bridge(section=spec.id, pairs=pairs)  # call site (2)
+    claims = call_synthesize_bridge(  # call site (2)
+        section=spec.id,
+        pairs=pairs,
+        structured_group_label=spec.structured_group_label,
+        structured_fields=spec.structured_fields,
+        structured_row_values=spec.structured_row_values,
+    )
     verified = verify_bridge_claims(claims, pairs)
 
     status = "verified" if verified and all(c.verified for c in verified) else "insufficient_evidence"
