@@ -4,6 +4,7 @@ from fastapi import Header, HTTPException, Path
 
 from app.domain.user import User
 from app.infra.db import get_session
+from app.infra.settings import auth_settings
 
 
 def _hash_key(api_key: str) -> str:
@@ -26,6 +27,9 @@ async def resolve_brand_scope(brand_id: str = Path(...), api_key: str = Header(.
     """Every brand-scoped route depends on this. Confinement before retrieval
     (P3): the grant is checked here, at the API boundary, never as a post-hoc
     filter on results already fetched for the wrong brand."""
+    if auth_settings.dev_bypass:
+        return f"run:{brand_id}"
+
     resolved = _lookup_api_key(api_key)
     if resolved is None:
         raise HTTPException(403, detail="invalid or revoked api key")
@@ -46,6 +50,9 @@ async def current_user(api_key: str = Header(...)) -> User:
     strategic_note authorship reads instead of a client-supplied string.
     Reuses the same api-key header resolve_brand_scope already validates;
     Step 5 is where a full session/JWT layer would replace this, not before."""
+    if auth_settings.dev_bypass:
+        return User(id=auth_settings.dev_user_id, email="dev@local", role="team_lead")
+
     resolved = _lookup_api_key(api_key)
     if resolved is None:
         raise HTTPException(401, detail="invalid or revoked api key")

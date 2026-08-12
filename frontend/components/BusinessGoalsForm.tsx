@@ -28,29 +28,29 @@ export function BusinessGoalsForm({ brandId }: { brandId: string }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="font-medium text-slate-900" htmlFor="business-goals">
+      <label className="font-medium text-text" htmlFor="business-goals">
         Business goals
       </label>
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-text-dim">
         Not inferred from uploaded material — this section is Team-Lead-authored input.
       </p>
       <textarea
         id="business-goals"
-        className="min-h-24 rounded-md border border-slate-300 p-3"
+        className="min-h-24 rounded-md border border-border p-3"
         placeholder="e.g. Grow DTC revenue 20% YoY, expand into Canada by Q4."
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
       <button
         type="button"
-        className="w-fit rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="w-fit rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         disabled={!text.trim() || submit.isPending}
         onClick={() => submit.mutate()}
       >
         {submit.isPending ? "Saving…" : "Save"}
       </button>
-      {submit.isSuccess && <p className="text-sm text-green-700">Saved.</p>}
-      {submit.isError && <p className="text-sm text-red-700">{(submit.error as Error).message}</p>}
+      {submit.isSuccess && <p className="text-sm text-success">Saved.</p>}
+      {submit.isError && <p className="text-sm text-danger">{(submit.error as Error).message}</p>}
     </div>
   );
 }

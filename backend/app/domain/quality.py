@@ -62,7 +62,11 @@ def _competitor_count_ok(doc: MarketResearchDocument) -> bool:
         return True
     if section.status != "verified":
         return False
-    return len(section.claims) >= _MIN_COMPETITORS
+    # Each competitor now spans multiple claims (one per table column, via
+    # claim.group_key) rather than one claim per competitor -- count distinct
+    # competitors, not raw claim count.
+    competitor_names = {c.group_key for c in section.claims if c.group_key}
+    return len(competitor_names) >= _MIN_COMPETITORS
 
 
 def _personas_grounded(doc: MarketResearchDocument) -> bool:

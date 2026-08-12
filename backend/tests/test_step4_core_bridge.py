@@ -77,7 +77,7 @@ def test_bridge_section_verified_after_promotion(monkeypatch):
         lambda section, brand_id: RetrievalPlan(sub_queries=["Instagram engagement"], k_per_query=8),
     )
 
-    def fake_bridge_synth(section, pairs):
+    def fake_bridge_synth(section, pairs, **kwargs):
         pair = pairs[0]
         return [
             ClaimDraft(
@@ -101,3 +101,47 @@ def test_bridge_section_degrades_when_no_pairs_found():
     spec = SECTIONS_BY_ID["platform_analysis"]
     result = run_section("brand-empty", spec, prior={})
     assert result.status == "insufficient_evidence"
+
+
+def test_bridge_section_carries_structured_table_tags(monkeypatch):
+    # competitor_analysis is bridge mode AND a structured_output table
+    # (sop1.py) -- proves the section's group_key/field_key vocabulary
+    # actually reaches call_synthesize_bridge, and a tagged claim survives
+    # verify_bridge_claims untouched.
+    core_kb = _promote_core_version(1)
+    _insert_chunk("run:brand-x", "run-1", "Suryodaya posts 5x per week")
+    _insert_chunk(core_kb, "core-1", "Category posting benchmark is 4.2x per week")
+
+    monkeypatch.setattr(
+        "app.orchestration.llm.call_plan",
+        lambda section, brand_id: RetrievalPlan(sub_queries=["posting cadence"], k_per_query=8),
+    )
+
+    captured = {}
+
+    def fake_bridge_synth(section, pairs, structured_group_label=None, structured_fields=None, **kwargs):
+        captured["structured_group_label"] = structured_group_label
+        captured["structured_fields"] = structured_fields
+        pair = pairs[0]
+        return [
+            ClaimDraft(
+                section=section,
+                text="Suryodaya posts more frequently than category benchmark",
+                chunk_id=pair.run_chunk.chunk_id,
+                supporting_chunk_id=pair.core_chunk.chunk_id,
+                group_key="Suryodaya Energy Systems",
+                field_key="content_frequency",
+            )
+        ]
+
+    monkeypatch.setattr("app.orchestration.llm.call_synthesize_bridge", fake_bridge_synth)
+
+    spec = SECTIONS_BY_ID["competitor_analysis"]
+    result = run_section("brand-x", spec, prior={})
+
+    assert result.status == "verified"
+    assert captured["structured_group_label"] == "competitor"
+    assert "strengths" in captured["structured_fields"]
+    [claim] = result.claims
+    assert claim.group_key == "Suryodaya Energy Systems"
+    assert claim.field_key == "content_frequency"

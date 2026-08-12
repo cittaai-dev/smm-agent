@@ -14,15 +14,16 @@ const INITIAL: DataCollectionStatus = { phase: "idle", itemCount: 0, messages: [
 
 // Backs app/brands/[id]/live-run/page.tsx -- subscribes to api/websocket.py's
 // /ws/live-run/{brand_id}/status, which relays workers/data_collection.py's
-// per-source phase broadcasts over Redis pub/sub (infra/pubsub.py). Only
-// connects once both brandId and apiKey are non-empty, since the endpoint
-// closes an unauthorized socket immediately (4003).
-export function useDataCollectionStatus(brandId: string, apiKey: string): DataCollectionStatus {
+// per-source phase broadcasts over Redis pub/sub (infra/pubsub.py). apiKey
+// may be empty -- liveRunSocketUrl substitutes a dev-only default (see
+// lib/api.ts); the endpoint still closes an unauthorized socket immediately
+// (4003) whenever SMM_AUTH_DEV_BYPASS is off.
+export function useDataCollectionStatus(brandId: string, apiKey = ""): DataCollectionStatus {
   const [status, setStatus] = useState<DataCollectionStatus>(INITIAL);
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    if (!brandId || !apiKey) return;
+    if (!brandId) return;
 
     setStatus(INITIAL);
     const ws = new WebSocket(liveRunSocketUrl(brandId, apiKey));

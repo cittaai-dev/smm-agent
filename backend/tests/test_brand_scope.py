@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.api.deps import current_user, resolve_brand_scope
 from app.infra.db import get_session
+from app.infra.settings import auth_settings
 
 
 def _seed_user_brand_grant(user_id: str, brand_id: str, api_key: str) -> None:
@@ -76,3 +77,20 @@ def test_current_user_resolves_real_identity(scoped_app):
     assert resp.status_code == 200
     assert resp.json()["id"] == "user-1"
     assert resp.json()["email"] == "user-1@example.com"
+
+
+def test_dev_bypass_grants_any_brand_with_no_seeded_rows(scoped_app):
+    # No _seed_user_brand_grant call at all -- proves the bypass path itself
+    # is real, not just that enforcement stays intact when it's off.
+    auth_settings.dev_bypass = True
+    try:
+        client = TestClient(scoped_app)
+        resp = client.get("/brands/never-seeded-brand/probe", headers={"api-key": "whatever"})
+        assert resp.status_code == 200
+        assert resp.json() == {"kb_id": "run:never-seeded-brand"}
+
+        resp = client.get("/whoami", headers={"api-key": "whatever"})
+        assert resp.status_code == 200
+        assert resp.json()["id"] == auth_settings.dev_user_id
+    finally:
+        auth_settings.dev_bypass = False

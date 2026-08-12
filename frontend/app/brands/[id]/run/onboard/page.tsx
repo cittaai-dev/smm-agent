@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import Link from "next/link";
 import { use } from "react";
 import { uploadSource } from "@/lib/api";
 import { BusinessGoalsForm } from "@/components/BusinessGoalsForm";
@@ -30,12 +29,12 @@ function UploadZone({
         label={label}
         accept={accept}
       />
-      {upload.isPending && <p className="text-sm text-slate-500">Uploading…</p>}
+      {upload.isPending && <p className="text-sm text-text-dim">Uploading…</p>}
       {upload.isSuccess && (
-        <p className="text-sm text-green-700">Queued for ingest: {upload.data.status}</p>
+        <p className="text-sm text-success">Queued for ingest: {upload.data.status}</p>
       )}
       {upload.isError && (
-        <p className="text-sm text-red-700">Upload failed: {(upload.error as Error).message}</p>
+        <p className="text-sm text-danger">Upload failed: {(upload.error as Error).message}</p>
       )}
     </div>
   );
@@ -47,8 +46,16 @@ export default function OnboardPage({ params }: { params: Promise<{ id: string }
   return (
     <main className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-semibold">Onboard brand material</h1>
-        <p className="text-slate-600">Brand: {brandId}</p>
+        <div className="mb-2.5 font-mono text-xs font-bold uppercase tracking-wide text-run">
+          Step 1 / 6 · Brand Intake
+        </div>
+        <h1 className="text-[28px] font-bold">Onboard a Brand</h1>
+        <p className="mt-2 max-w-xl text-text-dim">
+          Every brand starts with the same intake: any material the brand already has gets uploaded
+          here. Everything downstream — research, competitor analysis, the final document — builds on
+          exactly what&apos;s captured in this step.
+        </p>
+        <p className="mt-2 text-sm text-text-faint">Brand: {brandId}</p>
       </div>
 
       <section className="flex flex-col gap-2">
@@ -73,7 +80,7 @@ export default function OnboardPage({ params }: { params: Promise<{ id: string }
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-medium">
-          Competitor material <span className="text-sm font-normal text-slate-500">(optional)</span>
+          Competitor material <span className="text-sm font-normal text-text-dim">(optional)</span>
         </h2>
         <UploadZone
           brandId={brandId}
@@ -86,13 +93,6 @@ export default function OnboardPage({ params }: { params: Promise<{ id: string }
       <section>
         <BusinessGoalsForm brandId={brandId} />
       </section>
-
-      <Link
-        href={`/brands/${encodeURIComponent(brandId)}/plan`}
-        className="mt-2 inline-block w-fit rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white"
-      >
-        Continue to plan
-      </Link>
     </main>
   );
 }

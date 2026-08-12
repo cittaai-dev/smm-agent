@@ -6,9 +6,9 @@ import { use } from "react";
 import { listSources, runAllResearch } from "@/lib/api";
 
 const STATUS_COLOR: Record<string, string> = {
-  degraded: "text-orange-700",
-  ingested: "text-green-700",
-  uploading: "text-slate-500",
+  degraded: "text-run",
+  ingested: "text-success",
+  uploading: "text-text-dim",
 };
 
 export default function PlanPage({ params }: { params: Promise<{ id: string }> }) {
@@ -29,7 +29,9 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
   const run = useMutation({
     mutationFn: () => runAllResearch(brandId),
     onSuccess: (document) => {
-      router.push(`/documents/${encodeURIComponent(document.id)}`);
+      router.push(
+        `/brands/${encodeURIComponent(brandId)}/run/research-plan?documentId=${encodeURIComponent(document.id)}`,
+      );
     },
   });
 
@@ -37,21 +39,27 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
 
   return (
     <main className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Run Market Research</h1>
-      <p className="text-slate-600">
-        Brand: {brandId}. Runs Plan → Retrieve → Synthesize → Verify → Repair → Deliver across all 11
-        SOP-01 sections.
-      </p>
+      <div>
+        <div className="mb-2.5 font-mono text-xs font-bold uppercase tracking-wide text-run">
+          Step 2 / 6 · Document Understanding
+        </div>
+        <h1 className="text-[28px] font-bold">Document Understanding</h1>
+        <p className="mt-2 max-w-xl text-text-dim">
+          Every uploaded file gets read and chunked before any research begins. Brand: {brandId}. Once
+          ingestion finishes, run Plan → Retrieve → Synthesize → Verify → Repair → Deliver across all 11
+          SOP-01 sections.
+        </p>
+      </div>
 
       {sources.data && sources.data.length > 0 && (
         <ul className="flex flex-col gap-1 text-sm">
           {sources.data.map((s) => (
             <li
               key={s.file_id}
-              className="flex items-center justify-between rounded border border-slate-200 px-3 py-2"
+              className="flex items-center justify-between rounded border border-border px-3 py-2"
             >
               <span>{s.filename}</span>
-              <span className={STATUS_COLOR[s.status] ?? "text-slate-500"}>
+              <span className={STATUS_COLOR[s.status] ?? "text-text-dim"}>
                 {s.status}
                 {s.degraded_reason ? ` — ${s.degraded_reason}` : ""}
               </span>
@@ -62,14 +70,14 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
 
       <button
         type="button"
-        className="w-fit rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="w-fit rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         onClick={() => run.mutate()}
         disabled={run.isPending || stillIngesting}
       >
         {run.isPending ? "Running…" : stillIngesting ? "Waiting for ingest…" : "Run research"}
       </button>
 
-      {run.isError && <p className="text-sm text-red-700">Run failed: {(run.error as Error).message}</p>}
+      {run.isError && <p className="text-sm text-danger">Run failed: {(run.error as Error).message}</p>}
     </main>
   );
 }

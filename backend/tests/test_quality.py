@@ -11,10 +11,16 @@ _PERSONA = VerifiedAudiencePersona(
 )
 
 
-def _claim(claim_id: str, section: str, verified: bool = True, source_claim_ids: list[str] | None = None) -> VerifiedClaim:
+def _claim(
+    claim_id: str,
+    section: str,
+    verified: bool = True,
+    source_claim_ids: list[str] | None = None,
+    group_key: str | None = None,
+) -> VerifiedClaim:
     return VerifiedClaim(
         claim_id=claim_id, section=section, text="x", chunk_id="c1", block_span=(0, 0),
-        verified=verified, source_claim_ids=source_claim_ids or [],
+        verified=verified, source_claim_ids=source_claim_ids or [], group_key=group_key,
     )
 
 
@@ -28,9 +34,9 @@ def _complete_passing_document() -> MarketResearchDocument:
 
     sections["brand_overview"].claims = [_claim("bo1", "brand_overview")]
     sections["competitor_analysis"].claims = [
-        _claim("comp1", "competitor_analysis"),
-        _claim("comp2", "competitor_analysis"),
-        _claim("comp3", "competitor_analysis"),
+        _claim("comp1", "competitor_analysis", group_key="Acme Corp"),
+        _claim("comp2", "competitor_analysis", group_key="Beta Inc"),
+        _claim("comp3", "competitor_analysis", group_key="Gamma LLC"),
     ]
     sections["target_audience"].personas = [_PERSONA]
     sections["key_takeaways"].claims = [
@@ -72,7 +78,25 @@ def test_verified_but_fewer_than_three_competitors_fails_competitor_count():
     # unlike insufficient_evidence, a *verified* section with too few
     # competitors is a real quality gap, not an unavailable check.
     doc = _complete_passing_document()
-    doc.sections["competitor_analysis"].claims = [_claim("comp1", "competitor_analysis")]
+    doc.sections["competitor_analysis"].claims = [
+        _claim("comp1", "competitor_analysis", group_key="Acme Corp")
+    ]
+    checkpoint = evaluate_checkpoint(doc)
+    assert not checkpoint.competitor_count_ok
+
+
+def test_competitor_count_counts_distinct_competitors_not_raw_claims():
+    # Each competitor now spans multiple claims (one per table column via
+    # claim.group_key) -- 2 competitors x many columns must still count as 2,
+    # not >= 3, even though the raw claim count is higher.
+    doc = _complete_passing_document()
+    doc.sections["competitor_analysis"].claims = [
+        _claim("c1", "competitor_analysis", group_key="Acme Corp"),
+        _claim("c2", "competitor_analysis", group_key="Acme Corp"),
+        _claim("c3", "competitor_analysis", group_key="Acme Corp"),
+        _claim("c4", "competitor_analysis", group_key="Beta Inc"),
+        _claim("c5", "competitor_analysis", group_key="Beta Inc"),
+    ]
     checkpoint = evaluate_checkpoint(doc)
     assert not checkpoint.competitor_count_ok
 

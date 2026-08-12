@@ -10,6 +10,11 @@ const verified: VerifiedAudiencePersona = {
   pain_points: ["Long commute times", "Rising fuel costs"],
   interests: ["Public transit", "Podcasts"],
   chunk_ids: ["chunk-1"],
+  age_range: "",
+  location: "",
+  occupation_income: "",
+  preferred_platforms: [],
+  confidence: 1,
   verified: true,
   rejection_reason: null,
 };

@@ -5,9 +5,9 @@
 export function RunCostBadge({ usd, budget }: { usd: number; budget: number }) {
   const pct = budget > 0 ? (usd / budget) * 100 : 0;
   return (
-    <span className="text-xs text-slate-500">
+    <span className="font-mono text-xs text-text-dim">
       ${usd.toFixed(3)} of ${budget.toFixed(2)}
-      {pct > 80 && <span className="text-amber-600"> ⚠</span>}
+      {pct > 80 && <span className="text-run"> ⚠</span>}
     </span>
   );
 }

@@ -32,30 +32,30 @@ export function StrategicNotesPanel({ documentId }: { documentId: string }) {
   });
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4">
-      <p className="text-sm font-medium text-slate-900">Team Lead notes</p>
+    <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+      <p className="text-sm font-medium text-text">Team Lead notes</p>
 
       {notes.data && notes.data.length > 0 && (
         <ul className="flex flex-col gap-2">
           {notes.data.map((note) => (
-            <li key={note.id} className="rounded-md bg-slate-50 p-3 text-sm">
-              <div className="flex items-center justify-between text-xs text-slate-500">
+            <li key={note.id} className="rounded-md bg-surface p-3 text-sm">
+              <div className="flex items-center justify-between text-xs text-text-dim">
                 <span>{SECTION_LABELS[note.section as SectionId] ?? note.section}</span>
                 <span>
                   {note.author} · {new Date(note.created_at).toLocaleString()}
                 </span>
               </div>
-              <p className="mt-1 text-slate-800">{note.text}</p>
+              <p className="mt-1 text-text">{note.text}</p>
             </li>
           ))}
         </ul>
       )}
 
-      <div className="flex flex-col gap-2 border-t border-slate-100 pt-3">
+      <div className="flex flex-col gap-2 border-t border-border pt-3">
         <div className="flex gap-2">
           <select
             aria-label="Section"
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-border px-2 py-1.5 text-sm"
             value={section}
             onChange={(e) => setSection(e.target.value as SectionId)}
           >
@@ -67,7 +67,7 @@ export function StrategicNotesPanel({ documentId }: { documentId: string }) {
           </select>
           <input
             aria-label="Your name"
-            className="w-40 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            className="w-40 rounded-md border border-border px-2 py-1.5 text-sm"
             placeholder="Your name"
             value={author}
             onChange={(e) => setAuthor(e.target.value)}
@@ -75,21 +75,21 @@ export function StrategicNotesPanel({ documentId }: { documentId: string }) {
         </div>
         <textarea
           aria-label="Note"
-          className="min-h-16 rounded-md border border-slate-300 p-2 text-sm"
+          className="min-h-16 rounded-md border border-border p-2 text-sm"
           placeholder="e.g. Double-check founding year against the About page."
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
         <button
           type="button"
-          className="w-fit rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="w-fit rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
           disabled={!text.trim() || !author.trim() || submit.isPending}
           onClick={() => submit.mutate()}
         >
           {submit.isPending ? "Adding…" : "Add note"}
         </button>
         {submit.isError && (
-          <p className="text-sm text-red-700">{(submit.error as Error).message}</p>
+          <p className="text-sm text-danger">{(submit.error as Error).message}</p>
         )}
       </div>
     </div>

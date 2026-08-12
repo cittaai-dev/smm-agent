@@ -1,9 +1,9 @@
 import type { SectionStatus } from "@/lib/types";
 
 const STYLES: Record<SectionStatus, string> = {
-  verified: "bg-green-100 text-green-800",
-  insufficient_evidence: "bg-amber-100 text-amber-800",
-  team_provided: "bg-blue-100 text-blue-800",
+  verified: "bg-success-soft text-success",
+  insufficient_evidence: "bg-run-soft text-run",
+  team_provided: "bg-accent-soft text-accent-text",
 };
 
 export function SectionStatusBadge({

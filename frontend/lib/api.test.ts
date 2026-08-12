@@ -29,7 +29,7 @@ describe("uploadSource", () => {
   it("includes source_kind in the form body when provided", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ status: "queued" }),
+      json: async () => ({ status: "queued", file_id: "file-abc123" }),
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -45,7 +45,7 @@ describe("uploadSource", () => {
   it("omits source_kind when not provided, letting the backend infer it", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ status: "queued" }),
+      json: async () => ({ status: "queued", file_id: "file-abc123" }),
     });
     vi.stubGlobal("fetch", fetchMock);
 

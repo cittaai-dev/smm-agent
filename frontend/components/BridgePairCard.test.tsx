@@ -27,6 +27,7 @@ describe("BridgePairCard", () => {
       chunk_id: "run-1",
       source_claim_ids: [],
       block_span: [0, 0],
+      confidence: 1,
       verified: true,
       rejection_reason: null,
     };

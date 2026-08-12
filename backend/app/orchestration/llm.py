@@ -171,6 +171,7 @@ def call_synthesize_from_prior(
     upstream: list[UpstreamSectionClaims],
     missing_sections: list[str],
     cost_tracker: RunCostTracker | None = None,
+    structured_fields: list[str] | None = None,
 ) -> list[DerivedClaimDraft]:
     """Same call site as call_synthesize (P2 counts it once, not twice) -- just a
     different template/input shape, for synthesis_only sections that derive from
@@ -181,6 +182,7 @@ def call_synthesize_from_prior(
         upstream=upstream,
         missing_sections=missing_sections,
         domain_facts=facts_for(section),
+        structured_fields=structured_fields or [],
     )
     prompt = render_synthesize_from_prior(ctx)
     parsed = _chat_parse(
@@ -196,7 +198,12 @@ def call_synthesize_from_prior(
 @traced_llm_call("synthesize")
 @traced_call_site("synthesize")
 def call_synthesize_bridge(
-    section: str, pairs: list[BridgePair], cost_tracker: RunCostTracker | None = None
+    section: str,
+    pairs: list[BridgePair],
+    cost_tracker: RunCostTracker | None = None,
+    structured_group_label: str | None = None,
+    structured_fields: list[str] | None = None,
+    structured_row_values: list[str] | None = None,
 ) -> list[ClaimDraft]:
     """Same call site as call_synthesize (P2 counts it once) -- BRIDGE mode's
     input shape is pairs, not raw chunks, but it's still exactly one
@@ -206,6 +213,9 @@ def call_synthesize_bridge(
         section_label=SECTION_LABELS[section],
         pairs=pairs,
         domain_facts=facts_for(section),
+        structured_group_label=structured_group_label,
+        structured_fields=structured_fields or [],
+        structured_row_values=structured_row_values or [],
     )
     prompt = render_synthesize_bridge(ctx)
     parsed = _chat_parse(

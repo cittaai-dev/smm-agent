@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, Form, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -20,6 +20,7 @@ from app.domain.client_view import ClientMarketResearchView, project_for_client
 from app.domain.data_source import DataSourceKind
 from app.domain.deliverable import Deliverable
 from app.domain.distribution import DistributionEvent, DistributionLink
+from app.export.docx_builder import build_docx
 from app.domain.kb_version import GoldenCase, KBVersion
 from app.domain.market_research_document import MarketResearchDocument
 from app.domain.market_segment import MarketSegment
@@ -240,12 +241,20 @@ async def set_team_input(brand_id: str, section_id: str, payload: TeamInputPaylo
 async def upload_source(brand_id: str, file: UploadFile, source_kind: str | None = Form(None)):
     _UPLOAD_DIR.mkdir(exist_ok=True)
     dest = _UPLOAD_DIR / f"{uuid4().hex}-{file.filename}"
-    dest.write_bytes(await file.read())
+    content = await file.read()
+    dest.write_bytes(content)
 
-    from app.workers.ingest import ingest_file
+    from app.workers.ingest import compute_file_id, ingest_file
 
     ingest_file.delay(brand_id, str(dest), source_kind)
-    return {"status": "queued"}
+    # file_id is content-addressed (compute_file_id), so the caller gets a
+    # correlation id to poll GET .../sources with, without waiting on the
+    # celery task to run and without the route writing to source_file itself
+    # (that write stays ingest_file's job -- one write path, per client_view.py's
+    # same discipline elsewhere in this codebase).
+    content_hash = hashlib.sha256(content).hexdigest()
+    file_id = compute_file_id(f"run:{brand_id}", content_hash)
+    return {"status": "queued", "file_id": file_id}
 
 
 @app.get("/brands/{brand_id}/sources")
@@ -303,6 +312,24 @@ async def get_checkpoint(document_id: str) -> QualityCheckpoint:
     if document is None:
         raise HTTPException(404, detail=f"no such document: {document_id}")
     return evaluate_checkpoint(document)
+
+
+@app.get("/documents/{document_id}/export.docx")
+async def export_document_docx(document_id: str) -> Response:
+    # Ungated like every other document-review endpoint above (get_document,
+    # approve, ...) -- a pre-existing, already-flagged gap (no session/login
+    # layer yet, api-key scoping only covers the Step 4/5 KB/data-source
+    # surfaces), not a new inconsistency introduced by adding this one.
+    document = _load_document(document_id)
+    if document is None:
+        raise HTTPException(404, detail=f"no such document: {document_id}")
+    buffer = build_docx(document)
+    filename = f"{document.brand_id}-market-research.docx"
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.post("/documents/{document_id}/notes")

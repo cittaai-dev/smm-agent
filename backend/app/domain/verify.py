@@ -32,6 +32,8 @@ def verify_claims(claims: list[ClaimDraft], context: RetrievedContext) -> list[V
                     text=claim.text,
                     verified=False,
                     rejection_reason="no_citation",
+                    group_key=claim.group_key,
+                    field_key=claim.field_key,
                 )
             )
             continue
@@ -45,6 +47,8 @@ def verify_claims(claims: list[ClaimDraft], context: RetrievedContext) -> list[V
                     chunk_id=claim.chunk_id,
                     verified=False,
                     rejection_reason="missing_chunk",
+                    group_key=claim.group_key,
+                    field_key=claim.field_key,
                 )
             )
             continue
@@ -55,7 +59,10 @@ def verify_claims(claims: list[ClaimDraft], context: RetrievedContext) -> list[V
                 text=claim.text,
                 chunk_id=claim.chunk_id,
                 block_span=chunk.block_span,
+                confidence=chunk.order_confidence,
                 verified=True,
+                group_key=claim.group_key,
+                field_key=claim.field_key,
             )
         )
     for claim in out:
@@ -71,7 +78,7 @@ def verify_derived_claims(
     every one of them resolves to an upstream claim that was itself verified --
     citing a rejected upstream claim would launder ungrounded content through a
     second hop, so only the verified set counts as known."""
-    known = {c.claim_id for c in upstream if c.verified}
+    known = {c.claim_id: c for c in upstream if c.verified}
     out: list[VerifiedClaim] = []
     for claim in claims:
         if not claim.source_claim_ids:
@@ -82,6 +89,8 @@ def verify_derived_claims(
                     text=claim.text,
                     verified=False,
                     rejection_reason="no_source_claims",
+                    group_key=claim.group_key,
+                    field_key=claim.field_key,
                 )
             )
             continue
@@ -96,16 +105,23 @@ def verify_derived_claims(
                     source_claim_ids=claim.source_claim_ids,
                     verified=False,
                     rejection_reason="missing_source_claim",
+                    group_key=claim.group_key,
+                    field_key=claim.field_key,
                 )
             )
             continue
+        # A derived claim is only as strong as its weakest source (P7).
+        confidence = min(known[cid].confidence for cid in claim.source_claim_ids)
         out.append(
             VerifiedClaim(
                 claim_id=claim_id,
                 section=claim.section,
                 text=claim.text,
                 source_claim_ids=claim.source_claim_ids,
+                confidence=confidence,
                 verified=True,
+                group_key=claim.group_key,
+                field_key=claim.field_key,
             )
         )
     for claim in out:
@@ -131,6 +147,8 @@ def verify_bridge_claims(claims: list[ClaimDraft], pairs: list[BridgePair]) -> l
                     chunk_id=claim.chunk_id or "",
                     verified=False,
                     rejection_reason="no_citation",
+                    group_key=claim.group_key,
+                    field_key=claim.field_key,
                 )
             )
             continue
@@ -143,10 +161,12 @@ def verify_bridge_claims(claims: list[ClaimDraft], pairs: list[BridgePair]) -> l
                     chunk_id=claim.chunk_id,
                     verified=False,
                     rejection_reason="missing_bridge_pair",
+                    group_key=claim.group_key,
+                    field_key=claim.field_key,
                 )
             )
             continue
-        run_chunk = next(p.run_chunk for p in pairs if p.run_chunk.chunk_id == claim.chunk_id)
+        pair = next(p for p in pairs if p.run_chunk.chunk_id == claim.chunk_id)
         out.append(
             VerifiedClaim(
                 claim_id=compute_claim_id(claim.section, claim.text, claim.chunk_id),
@@ -154,8 +174,11 @@ def verify_bridge_claims(claims: list[ClaimDraft], pairs: list[BridgePair]) -> l
                 text=claim.text,
                 chunk_id=claim.chunk_id,
                 supporting_chunk_id=claim.supporting_chunk_id,
-                block_span=run_chunk.block_span,
+                block_span=pair.run_chunk.block_span,
+                confidence=min(pair.run_chunk.order_confidence, pair.core_chunk.order_confidence),
                 verified=True,
+                group_key=claim.group_key,
+                field_key=claim.field_key,
             )
         )
     for claim in out:
@@ -168,15 +191,25 @@ def verify_audience_personas(
 ) -> list[VerifiedAudiencePersona]:
     """Same P4 discipline as verify_claims: a persona's grounding is a
     deterministic check against the assembled context, never the model's own
-    say-so. incomplete_persona is a structural check (does it have both
-    pain_points and interests), not the model judging its own quality --
-    matches how the doc's own evaluate_checkpoint reasons about personas, just
-    enforced here instead of left to a checkpoint to notice later."""
-    known = {c.chunk_id for c in context.chunks}
+    say-so. incomplete_persona is a structural check -- does it have
+    pain_points, interests, AND the persona-table fields (age_range,
+    location, occupation_income, preferred_platforms) the target_audience
+    table renders -- not the model judging its own quality; matches how the
+    doc's own evaluate_checkpoint reasons about personas, just enforced here
+    instead of left to a checkpoint to notice later."""
+    known = {c.chunk_id: c for c in context.chunks}
     out: list[VerifiedAudiencePersona] = []
     for p in personas:
         persona_id = compute_persona_id(p.section, p.name, *p.chunk_ids)
-        if not p.pain_points or not p.interests:
+        is_complete = (
+            p.pain_points
+            and p.interests
+            and p.age_range
+            and p.location
+            and p.occupation_income
+            and p.preferred_platforms
+        )
+        if not is_complete:
             out.append(
                 VerifiedAudiencePersona(
                     persona_id=persona_id,
@@ -185,6 +218,10 @@ def verify_audience_personas(
                     pain_points=p.pain_points,
                     interests=p.interests,
                     chunk_ids=p.chunk_ids,
+                    age_range=p.age_range,
+                    location=p.location,
+                    occupation_income=p.occupation_income,
+                    preferred_platforms=p.preferred_platforms,
                     verified=False,
                     rejection_reason="incomplete_persona",
                 )
@@ -198,6 +235,10 @@ def verify_audience_personas(
                     name=p.name,
                     pain_points=p.pain_points,
                     interests=p.interests,
+                    age_range=p.age_range,
+                    location=p.location,
+                    occupation_income=p.occupation_income,
+                    preferred_platforms=p.preferred_platforms,
                     verified=False,
                     rejection_reason="no_citation",
                 )
@@ -213,6 +254,10 @@ def verify_audience_personas(
                     pain_points=p.pain_points,
                     interests=p.interests,
                     chunk_ids=p.chunk_ids,
+                    age_range=p.age_range,
+                    location=p.location,
+                    occupation_income=p.occupation_income,
+                    preferred_platforms=p.preferred_platforms,
                     verified=False,
                     rejection_reason="missing_chunk",
                 )
@@ -226,6 +271,11 @@ def verify_audience_personas(
                 pain_points=p.pain_points,
                 interests=p.interests,
                 chunk_ids=p.chunk_ids,
+                age_range=p.age_range,
+                location=p.location,
+                occupation_income=p.occupation_income,
+                preferred_platforms=p.preferred_platforms,
+                confidence=min(known[cid].order_confidence for cid in p.chunk_ids),
                 verified=True,
             )
         )

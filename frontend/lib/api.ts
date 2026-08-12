@@ -207,8 +207,17 @@ export function getClientView(token: string): Promise<ClientMarketResearchView> 
 // Step 4: Market Intel Core console -- all requests need the api-key header
 // (api/deps.py's current_user), unlike the brand-workflow endpoints above
 // which don't enforce auth yet (Step 4's gate lands as a separate PR).
+//
+// Local-dev only: the backend's SMM_AUTH_DEV_BYPASS short-circuits the real
+// api_key/brand_grant check entirely (see api/deps.py), so any non-empty
+// value works locally -- this constant exists only so callers don't need a
+// manual input field for it. Against a real deployment (bypass off) this
+// literal string simply fails closed with a normal 403, same as any other
+// unrecognized key.
+const DEV_API_KEY = "local-dev";
+
 function withApiKey(apiKey: string, init?: RequestInit): RequestInit {
-  return { ...init, headers: { ...(init?.headers ?? {}), "api-key": apiKey } };
+  return { ...init, headers: { ...(init?.headers ?? {}), "api-key": apiKey || DEV_API_KEY } };
 }
 
 export function triggerStagingBuild(
@@ -322,5 +331,6 @@ export function fetchDataSourceHealth(): Promise<DataSourceHealthSummary> {
 // never drift apart in an env file.
 export function liveRunSocketUrl(brandId: string, apiKey: string): string {
   const wsBase = API_BASE_URL.replace(/^http/, "ws");
-  return `${wsBase}/ws/live-run/${encodeURIComponent(brandId)}/status?api_key=${encodeURIComponent(apiKey)}`;
+  const key = apiKey || DEV_API_KEY;
+  return `${wsBase}/ws/live-run/${encodeURIComponent(brandId)}/status?api_key=${encodeURIComponent(key)}`;
 }

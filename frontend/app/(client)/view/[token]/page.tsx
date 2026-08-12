@@ -20,13 +20,13 @@ export default function ClientReportPage({ params }: { params: Promise<{ token: 
   });
 
   if (viewQuery.isLoading) {
-    return <p className="text-slate-500">Loading…</p>;
+    return <p className="text-text-dim">Loading…</p>;
   }
 
   if (viewQuery.isError) {
     const notFound = viewQuery.error instanceof ApiError && viewQuery.error.status === 404;
     return (
-      <p className="text-red-700">
+      <p className="text-danger">
         {notFound ? "This link has expired or is no longer valid." : "Could not load this report."}
       </p>
     );
@@ -45,7 +45,7 @@ export default function ClientReportPage({ params }: { params: Promise<{ token: 
           <section key={id}>
             <h2 className="mb-3 text-lg font-semibold">{SECTION_LABELS[id]}</h2>
             {claims.map((c, i) => (
-              <p key={i} className="mb-2 text-sm text-slate-700">
+              <p key={i} className="mb-2 text-sm text-text-dim">
                 {c.text}
               </p>
             ))}
@@ -58,13 +58,13 @@ export default function ClientReportPage({ params }: { params: Promise<{ token: 
           <h2 className="mb-3 text-lg font-semibold">Audience Personas</h2>
           <div className="flex flex-col gap-3">
             {view.personas.map((p, i) => (
-              <div key={i} className="rounded-lg border border-slate-200 p-3">
+              <div key={i} className="rounded-lg border border-border p-3">
                 <p className="text-sm font-medium">{p.name}</p>
                 {p.pain_points.length > 0 && (
-                  <p className="text-xs text-slate-500">Pain points: {p.pain_points.join(", ")}</p>
+                  <p className="text-xs text-text-dim">Pain points: {p.pain_points.join(", ")}</p>
                 )}
                 {p.interests.length > 0 && (
-                  <p className="text-xs text-slate-500">Interests: {p.interests.join(", ")}</p>
+                  <p className="text-xs text-text-dim">Interests: {p.interests.join(", ")}</p>
                 )}
               </div>
             ))}

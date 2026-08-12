@@ -125,6 +125,18 @@ class CircuitBreakerSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SMM_CIRCUIT_BREAKER_", env_file=".env", extra="ignore")
 
 
+class AuthSettings(BaseSettings):
+    # Local-dev/demo convenience only. P3 confinement (grant -> kb_id) is
+    # still fully enforced whenever this is false -- the only safe default
+    # for anything that isn't a developer's own machine. A real session/JWT
+    # layer (current_user's own docstring already flags this) is the eventual
+    # real fix, not this flag.
+    dev_bypass: bool = False
+    dev_user_id: str = "dev-user"
+
+    model_config = SettingsConfigDict(env_prefix="SMM_AUTH_", env_file=".env", extra="ignore")
+
+
 class CostBudgetSettings(BaseSettings):
     max_tokens_per_run: int = 40_000
     max_usd_per_run: float = 2.00
@@ -152,3 +164,4 @@ rate_limit_settings = RateLimitSettings()
 api_rate_limit_settings = ApiRateLimitSettings()
 circuit_breaker_settings = CircuitBreakerSettings()
 cost_budget_settings = CostBudgetSettings()
+auth_settings = AuthSettings()

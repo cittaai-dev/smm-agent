@@ -25,8 +25,8 @@ export default function SystemStatusPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
       <div>
-        <h1 className="text-lg font-semibold text-slate-900">System Status</h1>
-        <p className="text-sm text-slate-500">Operator-facing health and data collection visibility.</p>
+        <h1 className="text-lg font-semibold text-text">System Status</h1>
+        <p className="text-sm text-text-dim">Operator-facing health and data collection visibility.</p>
       </div>
 
       <div className="flex gap-4">
@@ -35,11 +35,11 @@ export default function SystemStatusPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-900">Data sources</h2>
+        <h2 className="mb-2 text-sm font-semibold text-text">Data sources</h2>
         <DataSourceHealth />
       </div>
 
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-text-faint">
         Full metrics (citation rejection rate, run latency, cost per run, call-site counts):{" "}
         <a className="underline" href={`${API_BASE_URL}/metrics`}>
           {API_BASE_URL}/metrics
@@ -51,7 +51,7 @@ export default function SystemStatusPage() {
 
 function StatusPill({ label, ok }: { label: string; ok: boolean }) {
   return (
-    <div className={`rounded-md border px-3 py-1.5 text-sm ${ok ? "border-emerald-500 bg-emerald-50" : "border-red-500 bg-red-50"}`}>
+    <div className={`rounded-md border px-3 py-1.5 text-sm ${ok ? "border-success bg-success-soft" : "border-danger bg-danger-soft"}`}>
       {label}: <span className="font-medium">{ok ? "ok" : "down"}</span>
     </div>
   );

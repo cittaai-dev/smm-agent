@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.infra.db import get_session
 from app.infra.pubsub import publish_status
+from app.infra.settings import auth_settings
 from app.main import app
 
 client = TestClient(app)
@@ -68,3 +69,17 @@ def test_broadcast_scoped_per_brand():
         received = json.loads(ws.receive_text())
 
     assert received["message"] == "for you"
+
+
+def test_dev_bypass_accepts_with_no_seeded_grant():
+    auth_settings.dev_bypass = True
+    try:
+        with client.websocket_connect("/ws/live-run/never-seeded-brand/status?api_key=whatever") as ws:
+            publish_status(
+                "never-seeded-brand",
+                {"timestamp": "x", "message": "bypassed", "phase": "queued"},
+            )
+            received = json.loads(ws.receive_text())
+        assert received["message"] == "bypassed"
+    finally:
+        auth_settings.dev_bypass = False

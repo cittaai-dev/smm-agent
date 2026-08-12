@@ -19,7 +19,7 @@ export function ApproveButton({
   return (
     <button
       type="button"
-      className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+      className="rounded-md bg-success px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
       disabled={!enabled}
       onClick={onApprove}
     >

@@ -35,6 +35,12 @@ class SynthesizeBridgeContext(BaseModel):
     section_label: str
     pairs: list[BridgePair]
     domain_facts: list[DomainFact] = []
+    # sop1.py's SectionSpec.structured_* -- empty for every non-tabular bridge
+    # section, so the v2 template's structured-output block simply doesn't
+    # render (same file serves both plain-bridge and tabular-bridge sections).
+    structured_group_label: str | None = None
+    structured_fields: list[str] = []
+    structured_row_values: list[str] = []
 
 
 class UpstreamSectionClaims(BaseModel):
@@ -48,6 +54,12 @@ class SynthesizeFromPriorContext(BaseModel):
     upstream: list[UpstreamSectionClaims]
     missing_sections: list[str] = []
     domain_facts: list[DomainFact] = []
+    # SWOT only -- see SynthesizeBridgeContext's identical fields. Empty for
+    # positioning_usp/key_takeaways, so v2's structured-output block is a
+    # no-op for them.
+    structured_group_label: str | None = None
+    structured_fields: list[str] = []
+    structured_row_values: list[str] = []
 
 
 def render_plan(ctx: PlanContext, version: str = "v1") -> str:
@@ -62,16 +74,16 @@ def render_repair(ctx: RepairContext, version: str = "v1") -> str:
     return _env.get_template(f"repair/{version}.jinja").render(**ctx.model_dump())
 
 
-def render_synthesize_from_prior(ctx: SynthesizeFromPriorContext, version: str = "v1") -> str:
+def render_synthesize_from_prior(ctx: SynthesizeFromPriorContext, version: str = "v2") -> str:
     return _env.get_template(f"synthesize_from_prior/{version}.jinja").render(**ctx.model_dump())
 
 
-def render_synthesize_target_audience(ctx: SynthesizeContext, version: str = "v1") -> str:
+def render_synthesize_target_audience(ctx: SynthesizeContext, version: str = "v2") -> str:
     # Reuses SynthesizeContext's shape as-is (section_id/section_label/chunks/
     # domain_facts) -- the persona-extraction task only needs a different
     # template, not a different input shape.
     return _env.get_template(f"synthesize_target_audience/{version}.jinja").render(**ctx.model_dump())
 
 
-def render_synthesize_bridge(ctx: SynthesizeBridgeContext, version: str = "v1") -> str:
+def render_synthesize_bridge(ctx: SynthesizeBridgeContext, version: str = "v2") -> str:
     return _env.get_template(f"synthesize_bridge/{version}.jinja").render(**ctx.model_dump())

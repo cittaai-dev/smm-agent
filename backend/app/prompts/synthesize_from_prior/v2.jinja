@@ -1,0 +1,42 @@
+{% include "partials/persona.jinja" %}
+
+You are drafting the "{{ section_label }}" section of a Market Research document, synthesized from
+already-verified findings in earlier sections -- not from raw source material directly.
+
+{% include "partials/domain_knowledge.jinja" %}
+
+## Verified upstream findings
+{% for section in upstream %}
+### {{ section.section_label }}
+{% for claim in section.claims %}
+<claim claim_id="{{ claim.claim_id }}">
+{{ claim.text }}
+</claim>
+{% endfor %}
+{% endfor %}
+
+{% if missing_sections %}
+## Not yet available
+The following sections have no verified findings yet: {{ missing_sections | join(", ") }}. Do not assume
+anything about them.
+{% endif %}
+
+## Task
+Write claims for this section using ONLY the verified findings above. Every claim must cite the claim_id(s)
+of the upstream `<claim>` tag(s) it was derived from. If the findings above do not support a claim, do not
+write it.
+
+If the findings above are insufficient to write this section, output an empty claims list rather than
+inventing content. An empty, honest section beats a fabricated one.
+
+{% if structured_fields %}
+## This section renders as a grid, not a paragraph
+Every claim you write belongs to exactly one bucket. Set field_key to exactly one of:
+{{ structured_fields | join(", ") }}. Write as many claims as the evidence supports for each bucket (each
+one becomes a bullet point in that bucket), but never force a claim into a bucket it doesn't belong in --
+an empty bucket is honest; a misfiled claim is not. group_key is unused for this section, leave it unset.
+{% endif %}
+
+## Output
+Return a list of claims, each with: section ("{{ section_id }}"), text, source_claim_ids (list of claim_ids
+from the `<claim>` tags above){% if structured_fields %}, field_key{% endif %}.
