@@ -63,6 +63,8 @@ describe("SynthesizePage", () => {
     vi.mocked(getDocument).mockResolvedValue(doc);
     renderWithClient();
     await waitFor(() => expect(getDocument).toHaveBeenCalledWith("doc-1"));
-    expect(await screen.findByText("Acme sells specialty coffee.")).toBeInTheDocument();
+    // The claim's text now appears twice: once in the flowing prose, once
+    // in the collapsed "Show sources" citation detail beneath it.
+    expect((await screen.findAllByText("Acme sells specialty coffee.")).length).toBeGreaterThan(0);
   });
 });

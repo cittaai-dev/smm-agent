@@ -3,6 +3,7 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { use, type ReactNode } from "react";
 import { WizardShell } from "@/components/wizard/WizardShell";
+import { WorkspaceProfileCard } from "@/components/wizard/WorkspaceProfileCard";
 import { BRAND_RUN_STEPS } from "@/lib/brandRunSteps";
 
 // Steps 2 (research-plan) through 4 (synthesize) all review a completed
@@ -10,26 +11,6 @@ import { BRAND_RUN_STEPS } from "@/lib/brandRunSteps";
 // param since MarketResearchDocument only exists once /research/run-all
 // (triggered from the "plan" step) has returned.
 const STEPS_REQUIRING_RUN = [false, false, true, true, true];
-
-function WorkspaceProfileCard() {
-  return (
-    <div className="rounded-lg border border-border bg-surface2 p-3.5">
-      <div className="mb-2 font-mono text-[10.5px] tracking-wide text-text-faint">WORKSPACE PROFILE</div>
-      <div className="flex justify-between py-0.5 text-xs">
-        <span className="text-text-dim">Scope</span>
-        <span>this brand only</span>
-      </div>
-      <div className="flex justify-between py-0.5 text-xs">
-        <span className="text-text-dim">Trust</span>
-        <span className="text-run">brand-provided</span>
-      </div>
-      <div className="flex justify-between py-0.5 text-xs">
-        <span className="text-text-dim">Lifetime</span>
-        <span>refreshed each cycle</span>
-      </div>
-    </div>
-  );
-}
 
 export default function BrandRunLayout({
   children,
@@ -54,8 +35,13 @@ export default function BrandRunLayout({
     const qs = documentId ? `?documentId=${encodeURIComponent(documentId)}` : "";
     const step = BRAND_RUN_STEPS[index];
     if (step.path === "") {
-      // Final step lives outside this route group, at the document's own id.
-      return documentId ? `/documents/${encodeURIComponent(documentId)}?from=run` : "";
+      // Final step lives outside this route group, at the document's own id
+      // -- carry brandId along so that page can rebuild the same wizard
+      // shell (sidebar/stepper) without waiting on the document fetch to
+      // learn its brand_id first.
+      return documentId
+        ? `/documents/${encodeURIComponent(documentId)}?from=run&brandId=${encodeURIComponent(brandId)}`
+        : "";
     }
     return `/brands/${encodeURIComponent(brandId)}/run/${step.path}${qs}`;
   }

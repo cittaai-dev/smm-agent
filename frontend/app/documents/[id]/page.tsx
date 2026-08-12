@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import { use } from "react";
+import { use, type ReactNode } from "react";
 import {
   approveDocument,
   ApiError,
@@ -23,6 +23,9 @@ import { RunCostBadge } from "@/components/RunCostBadge";
 import { SectionOutline } from "@/components/SectionOutline";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StrategicNotesPanel } from "@/components/StrategicNotesPanel";
+import { WizardShell } from "@/components/wizard/WizardShell";
+import { WorkspaceProfileCard } from "@/components/wizard/WorkspaceProfileCard";
+import { BRAND_RUN_STEPS } from "@/lib/brandRunSteps";
 import { SECTION_ORDER } from "@/lib/sections";
 import type { CheckpointFailedDetail } from "@/lib/types";
 
@@ -44,6 +47,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const { id: documentId } = use(params);
   const searchParams = useSearchParams();
   const fromRun = searchParams.get("from") === "run";
+  const brandId = searchParams.get("brandId");
   const queryClient = useQueryClient();
   const queryKey = ["document", documentId];
   const checkpointKey = ["checkpoint", documentId];
@@ -91,11 +95,48 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     },
   });
 
+  // When reached via the run wizard's "Go to full report" link, keep the
+  // same sidebar/stepper chrome as steps 1-5 instead of dropping into a bare
+  // page -- brandId travels in the query string precisely so this can be
+  // known before the document itself has loaded.
+  function stepHref(index: number): string | null {
+    if (!brandId) return null;
+    const step = BRAND_RUN_STEPS[index];
+    if (step.path === "") {
+      return `/documents/${encodeURIComponent(documentId)}?from=run&brandId=${encodeURIComponent(brandId)}`;
+    }
+    return `/brands/${encodeURIComponent(brandId)}/run/${step.path}?documentId=${encodeURIComponent(documentId)}`;
+  }
+
+  function wrapInReportShell(children: ReactNode) {
+    if (!(fromRun && brandId)) {
+      return <main className="flex flex-col gap-6">{children}</main>;
+    }
+    const lastIndex = BRAND_RUN_STEPS.length - 1;
+    return (
+      <WizardShell
+        brandLabel="Brand Run"
+        pipelineBadge="BRAND WORKSPACE"
+        scopeLabel={`brand:${brandId}`}
+        steps={BRAND_RUN_STEPS}
+        currentIndex={lastIndex}
+        maxVisitedIndex={lastIndex}
+        stepHref={stepHref}
+        profileCard={<WorkspaceProfileCard />}
+        backHref={stepHref(lastIndex - 1)}
+        nextHref={null}
+        nextLabel="Final step"
+      >
+        <div className="flex flex-col gap-6">{children}</div>
+      </WizardShell>
+    );
+  }
+
   if (documentQuery.isLoading) {
-    return <p className="text-text-dim">Loading…</p>;
+    return wrapInReportShell(<p className="text-text-dim">Loading…</p>);
   }
   if (documentQuery.isError || !documentQuery.data) {
-    return <p className="text-danger">Could not load document {documentId}.</p>;
+    return wrapInReportShell(<p className="text-danger">Could not load document {documentId}.</p>);
   }
 
   const document = documentQuery.data;
@@ -108,9 +149,9 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     (s) => (s.call_site_trace.repair ?? 0) > 0,
   ).length;
 
-  return (
-    <main className="flex flex-col gap-6">
-      {fromRun && (
+  return wrapInReportShell(
+    <>
+      {fromRun && !brandId && (
         <p className="font-mono text-xs font-bold uppercase tracking-wide text-run">
           Step 6 / 6 · Market Research Report
         </p>
@@ -172,6 +213,6 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       <StrategicNotesPanel documentId={documentId} />
 
       <DistributionPanel documentId={documentId} documentStatus={document.status} />
-    </main>
+    </>,
   );
 }

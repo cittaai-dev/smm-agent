@@ -4,6 +4,7 @@ import { SECTION_LAYOUT } from "@/lib/sectionLayout";
 import type { MarketResearchDocument, VerifiedClaim } from "@/lib/types";
 import { ClaimList } from "./ClaimList";
 import { PersonaList } from "./PersonaList";
+import { ProseSection } from "./ProseSection";
 import { CompetitorTable } from "./document-sections/CompetitorTable";
 import { PersonaTable } from "./document-sections/PersonaTable";
 import { PlatformTable } from "./document-sections/PlatformTable";
@@ -35,8 +36,9 @@ export function DocumentSectionsReview({ document }: { document: MarketResearchD
 
             {id === "target_audience" ? (
               <>
-                <ClaimList claims={claims} />
+                <ProseSection claims={claims} />
                 <PersonaTable personas={personas} />
+                <CitationDetails claims={claims} />
               </>
             ) : layout.structuredOutput === "competitor_table" ? (
               <>
@@ -55,8 +57,9 @@ export function DocumentSectionsReview({ document }: { document: MarketResearchD
               </>
             ) : (
               <>
-                <ClaimList claims={claims} />
+                <ProseSection claims={claims} />
                 <PersonaList personas={personas} />
+                <CitationDetails claims={claims} />
               </>
             )}
           </div>
@@ -70,7 +73,7 @@ function CitationDetails({ claims }: { claims: VerifiedClaim[] }) {
   if (claims.length === 0) return null;
   return (
     <details className="text-sm">
-      <summary className="cursor-pointer text-text-faint">Show per-cell citations</summary>
+      <summary className="cursor-pointer text-text-faint">Show sources</summary>
       <div className="mt-2">
         <ClaimList claims={claims} />
       </div>
