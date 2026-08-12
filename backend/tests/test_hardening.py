@@ -108,7 +108,9 @@ def test_rate_limit_scoped_per_caller():
 
 def test_health_live_and_ready():
     client = TestClient(app)
-    assert client.get("/health/live").json() == {"status": "alive"}
+    live_body = client.get("/health/live").json()
+    assert live_body["status"] == "alive"
+    assert live_body["git_sha"]  # "unknown" outside Docker, a real sha inside it -- never absent
     assert client.get("/health/ready").json() == {"status": "ready"}
 
 

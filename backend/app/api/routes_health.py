@@ -1,3 +1,4 @@
+import os
 from datetime import UTC, datetime
 
 from fastapi import APIRouter
@@ -6,6 +7,13 @@ from app.infra.db import get_session
 from app.infra.rate_limit import get_client
 
 health_router = APIRouter()
+
+# Baked into the image at `docker build --build-arg GIT_SHA=$(git rev-parse
+# --short HEAD)` (see Makefile) -- "unknown" outside Docker (bare `uvicorn`,
+# pytest). Answers "is this container actually running the code I just
+# merged" without SSHing in and diffing files -- a container rebuilt from a
+# stale cached image is otherwise indistinguishable from a fresh one.
+_GIT_SHA = os.environ.get("GIT_SHA", "unknown")
 
 # The one real connector today (workers/data_collection.py's _COLLECTORS) plus
 # the pluggable stubs -- reported here even while unconfigured so the
@@ -19,7 +27,7 @@ _STALE_AFTER_HOURS = 24
 
 @health_router.get("/health/live")
 async def live() -> dict:
-    return {"status": "alive"}
+    return {"status": "alive", "git_sha": _GIT_SHA}
 
 
 @health_router.get("/health/ready")

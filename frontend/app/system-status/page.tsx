@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { API_BASE_URL } from "@/lib/api";
 import { DataSourceHealth } from "@/components/DataSourceHealth";
 
-async function fetchHealth(path: string): Promise<{ status: string } | null> {
+async function fetchHealth(path: string): Promise<{ status: string; git_sha?: string } | null> {
   try {
     const res = await fetch(`${API_BASE_URL}${path}`);
     return res.ok ? await res.json() : null;
@@ -12,6 +12,12 @@ async function fetchHealth(path: string): Promise<{ status: string } | null> {
     return null;
   }
 }
+
+// Baked in at `docker build --build-arg GIT_SHA=...` time (see Makefile,
+// frontend/Dockerfile) -- "unknown" for `next dev`/non-Docker runs. Lets you
+// answer "is this container actually running what I just merged" by eye,
+// instead of re-discovering the down/up-without-rebuild footgun again.
+const FRONTEND_GIT_SHA = process.env.NEXT_PUBLIC_GIT_SHA ?? "unknown";
 
 // Step 6 Part C §10 -- operator-facing operational visibility. Deliberately
 // doesn't fabricate a p95-latency/citation-rejection-rate summary here: those
@@ -32,6 +38,11 @@ export default function SystemStatusPage() {
       <div className="flex gap-4">
         <StatusPill label="API liveness" ok={live.data?.status === "alive"} />
         <StatusPill label="API readiness (DB + Redis)" ok={ready.data?.status === "ready"} />
+      </div>
+
+      <div className="flex gap-4 font-mono text-xs text-text-faint">
+        <span>frontend build: {FRONTEND_GIT_SHA}</span>
+        <span>backend build: {live.data?.git_sha ?? "unknown"}</span>
       </div>
 
       <div>
