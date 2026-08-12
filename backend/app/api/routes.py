@@ -20,7 +20,6 @@ from app.domain.client_view import ClientMarketResearchView, project_for_client
 from app.domain.data_source import DataSourceKind
 from app.domain.deliverable import Deliverable
 from app.domain.distribution import DistributionEvent, DistributionLink
-from app.export.docx_builder import build_docx
 from app.domain.kb_version import GoldenCase, KBVersion
 from app.domain.market_research_document import MarketResearchDocument
 from app.domain.market_segment import MarketSegment
@@ -29,6 +28,7 @@ from app.domain.review import ApprovalGateRecord, DistributionRecord, StrategicN
 from app.domain.sop1 import SECTIONS_BY_ID
 from app.domain.source_file import SourceFile
 from app.domain.user import User
+from app.export.docx_builder import build_docx
 from app.infra.crypto import encrypt_api_key
 from app.infra.db import get_session
 from app.infra.settings import api_settings
@@ -540,7 +540,9 @@ async def client_view(token: str) -> ClientMarketResearchView:
 
 
 @app.post("/core/staging/build")
-async def trigger_staging_build(payload: StagingBuildPayload, user: User = Depends(current_user)) -> dict:
+async def trigger_staging_build(
+    payload: StagingBuildPayload, user: User = Depends(current_user)  # noqa: B008 -- FastAPI DI idiom
+) -> dict:
     from app.workers.core_ingest import build_staging
 
     build_staging.delay(payload.source_paths, payload.target_version)
@@ -559,7 +561,9 @@ async def list_core_versions() -> list[KBVersion]:
 
 @app.post("/core/staging/{version}/promotion-requests")
 async def create_promotion_request(
-    version: int, payload: PromotionRequestPayload, user: User = Depends(current_user)
+    version: int,
+    payload: PromotionRequestPayload,
+    user: User = Depends(current_user),  # noqa: B008 -- FastAPI DI idiom
 ) -> dict:
     from app.eval.gate import evaluate_staging
     from app.eval.golden_runner import default_synthesis_runner
@@ -606,7 +610,9 @@ async def create_promotion_request(
 
 @app.post("/core/promotion-requests/{request_id}/decide")
 async def decide_promotion(
-    request_id: str, payload: PromotionDecisionPayload, user: User = Depends(current_user)
+    request_id: str,
+    payload: PromotionDecisionPayload,
+    user: User = Depends(current_user),  # noqa: B008 -- FastAPI DI idiom
 ) -> dict:
     with get_session() as session:
         row = session.execute(

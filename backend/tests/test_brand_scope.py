@@ -43,7 +43,7 @@ def scoped_app() -> FastAPI:
         return {"kb_id": kb_id}
 
     @app.get("/whoami")
-    async def whoami(user=Depends(current_user)):
+    async def whoami(user=Depends(current_user)):  # noqa: B008 -- FastAPI DI idiom
         return user.model_dump()
 
     return app

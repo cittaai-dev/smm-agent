@@ -16,7 +16,7 @@ def build_staging_batch(source_paths: list[str], target_version: int) -> list[Ch
     for path in source_paths:
         try:
             blocks = parse_by_type(path, source_kind="market_research")
-        except Exception:  # noqa: BLE001 -- P5: one bad source degrades, never aborts the batch
+        except Exception:  # noqa: BLE001, S112 -- P5: one bad source degrades, never aborts the batch
             continue
 
         non_empty = [b for b in blocks if b.text.strip()]
