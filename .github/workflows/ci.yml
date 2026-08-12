@@ -60,6 +60,22 @@ jobs:
       - run: cd frontend && npm run build
       - run: cd frontend && npm run test
 
+  check-api-types-drift:
+    # Catches exactly the gap flagged in the data-integrity audit: api-types.ts
+    # is hand-regenerated (frontend/package.json's gen:api-types), so a backend
+    # schema change with no one remembering to re-run it would otherwise ship
+    # silently stale frontend types.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "20.14.0" }
+      - run: pip install -e backend[dev] --break-system-packages
+      - run: cd frontend && npm ci
+      - run: cd frontend && npm run check:api-types
+
   e2e-smoke:
     runs-on: ubuntu-latest
     needs: [test-backend, test-frontend]
